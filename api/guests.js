@@ -1,35 +1,26 @@
 import { put, list } from '@vercel/blob';
 
 const BLOB_KEY = 'masigabi-guests.json';
-const TOKEN = () => process.env.BLOB_READ_WRITE_TOKEN;
-
-async function readBody(req) {
-  return new Promise((resolve) => {
-    let data = '';
-    req.on('data', chunk => { data += chunk; });
-    req.on('end', () => {
-      try { resolve(JSON.parse(data)); } catch { resolve({}); }
-    });
-  });
-}
 
 async function readGuests() {
   try {
-    const { blobs } = await list({ prefix: BLOB_KEY, token: TOKEN() });
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    const { blobs } = await list({ prefix: BLOB_KEY, token });
     if (!blobs.length) return [];
-    // Fetch the blob URL directly — it's public
-    const res = await fetch(blobs[0].downloadUrl || blobs[0].url);
+    const res = await fetch(blobs[0].url);
     if (!res.ok) return [];
     return await res.json();
-  } catch {
+  } catch (e) {
+    console.error('readGuests error:', e);
     return [];
   }
 }
 
 async function writeGuests(guests) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
   await put(BLOB_KEY, JSON.stringify(guests), {
     access: 'public',
-    token: TOKEN(),
+    token,
     addRandomSuffix: false,
     contentType: 'application/json',
   });
@@ -42,32 +33,42 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (!TOKEN()) return res.status(500).json({ error: 'Storage not configured' });
 
-  if (req.method === 'GET') {
-    return res.status(200).json(await readGuests());
-  }
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) return res.status(500).json({ error: 'Storage not configured' });
 
-  const body = await readBody(req);
-
-  if (req.method === 'POST') {
-    const name = (body.name || '').trim().slice(0, 40);
-    if (!name) return res.status(400).json({ error: 'Invalid name' });
-    const guests = await readGuests();
-    if (!guests.includes(name)) {
-      guests.push(name);
-      await writeGuests(guests);
+  try {
+    if (req.method === 'GET') {
+      return res.status(200).json(await readGuests());
     }
-    return res.status(200).json(guests);
-  }
 
-  if (req.method === 'DELETE') {
-    const { name, password } = body;
-    if (password !== 'gabi') return res.status(403).json({ error: 'wrong_password' });
-    const guests = await readGuests();
-    await writeGuests(guests.filter(g => g !== name));
-    return res.status(200).json(guests.filter(g => g !== name));
-  }
+    // Parse body — Vercel pre-parses JSON bodies into req.body
+    const body = req.body || {};
 
-  return res.status(405).json({ error: 'Method not allowed' });
+    if (req.method === 'POST') {
+      const name = (typeof body.name === 'string' ? body.name : '').trim().slice(0, 40);
+      if (!name) return res.status(400).json({ error: 'Invalid name' });
+      const guests = await readGuests();
+      if (!guests.includes(name)) {
+        guests.push(name);
+        await writeGuests(guests);
+      }
+      return res.status(200).json(guests);
+    }
+
+    if (req.method === 'DELETE') {
+      const name = body.name;
+      const password = body.password;
+      if (password !== 'gabi') return res.status(403).json({ error: 'wrong_password' });
+      const guests = await readGuests();
+      const updated = guests.filter(g => g !== name);
+      await writeGuests(updated);
+      return res.status(200).json(updated);
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (e) {
+    console.error('handler error:', e);
+    return res.status(500).json({ error: String(e) });
+  }
 }
