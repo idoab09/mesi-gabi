@@ -1,31 +1,20 @@
-import { put } from '@vercel/blob';
-
-// Fixed blob URL — no list() call needed, avoids CDN-cached metadata
-const BLOB_URL = 'https://qjyxqnzcycw1l7dp.public.blob.vercel-storage.com/masigabi-guests.json';
-const BLOB_KEY = 'masigabi-guests.json';
+const BIN_ID = '69d75c89aaba882197dc5ee2';
+const MASTER_KEY = '$2a$10$v2j06aVyWZMNAkxaPsNA7uligf2reBc/zHjnH0ULm6hshQJNs8GZ2';
+const BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 async function readGuests() {
-  try {
-    // ?download=1 is the downloadUrl form — bypasses CDN content cache
-    const res = await fetch(BLOB_URL + '?download=1&t=' + Date.now(), {
-      cache: 'no-store',
-      headers: { 'Pragma': 'no-cache' },
-    });
-    if (!res.ok) return [];
-    return await res.json();
-  } catch (e) {
-    console.error('readGuests error:', e);
-    return [];
-  }
+  const res = await fetch(BASE + '/latest', {
+    headers: { 'X-Master-Key': MASTER_KEY },
+  });
+  const data = await res.json();
+  return data.record?.guests || [];
 }
 
 async function writeGuests(guests) {
-  await put(BLOB_KEY, JSON.stringify(guests), {
-    access: 'public',
-    token: process.env.BLOB_READ_WRITE_TOKEN,
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: 'application/json',
+  await fetch(BASE, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
+    body: JSON.stringify({ guests }),
   });
 }
 
@@ -36,9 +25,6 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) return res.status(500).json({ error: 'Storage not configured' });
 
   try {
     if (req.method === 'GET') {
