@@ -1,15 +1,16 @@
-import { put, list } from '@vercel/blob';
+import { put } from '@vercel/blob';
 
+// Fixed blob URL — no list() call needed, avoids CDN-cached metadata
+const BLOB_URL = 'https://qjyxqnzcycw1l7dp.public.blob.vercel-storage.com/masigabi-guests.json';
 const BLOB_KEY = 'masigabi-guests.json';
 
 async function readGuests() {
   try {
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const { blobs } = await list({ prefix: BLOB_KEY, token });
-    if (!blobs.length) return [];
-    // Public blob — fetch directly by URL
-    // Use downloadUrl to bypass CDN cache (always fresh)
-    const res = await fetch(blobs[0].downloadUrl, { cache: 'no-store' });
+    // ?download=1 is the downloadUrl form — bypasses CDN content cache
+    const res = await fetch(BLOB_URL + '?download=1&t=' + Date.now(), {
+      cache: 'no-store',
+      headers: { 'Pragma': 'no-cache' },
+    });
     if (!res.ok) return [];
     return await res.json();
   } catch (e) {
@@ -19,10 +20,9 @@ async function readGuests() {
 }
 
 async function writeGuests(guests) {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
   await put(BLOB_KEY, JSON.stringify(guests), {
     access: 'public',
-    token,
+    token: process.env.BLOB_READ_WRITE_TOKEN,
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: 'application/json',
