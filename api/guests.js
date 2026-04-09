@@ -1,12 +1,14 @@
-import { put, head, del } from '@vercel/blob';
+// Guest list API — persists to Vercel Blob
+// Requires env var: BLOB_READ_WRITE_TOKEN (set in Vercel dashboard → Storage → Blob)
+import { put, list } from '@vercel/blob';
 
-const BLOB_FILENAME = 'masigabi-guests.json';
+const BLOB_KEY = 'masigabi-guests.json';
 
-async function readGuests(token) {
+async function readGuests() {
   try {
-    // Try to fetch existing blob
-    const blobInfo = await head(`https://blob.vercel-storage.com/${BLOB_FILENAME}`, { token });
-    const res = await fetch(blobInfo.url);
+    const { blobs } = await list({ prefix: BLOB_KEY, token: process.env.BLOB_READ_WRITE_TOKEN });
+    if (!blobs.length) return [];
+    const res = await fetch(blobs[0].url + '?t=' + Date.now()); // cache-bust
     if (!res.ok) return [];
     return await res.json();
   } catch {
@@ -14,12 +16,13 @@ async function readGuests(token) {
   }
 }
 
-async function writeGuests(guests, token) {
-  await put(BLOB_FILENAME, JSON.stringify(guests), {
+async function writeGuests(guests) {
+  await put(BLOB_KEY, JSON.stringify(guests), {
     access: 'public',
-    token,
+    token: process.env.BLOB_READ_WRITE_TOKEN,
     addRandomSuffix: false,
     contentType: 'application/json',
+    cacheControlMaxAge: 0,
   });
 }
 
@@ -27,35 +30,36 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) return res.status(500).json({ error: 'Missing BLOB token' });
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return res.status(500).json({ error: 'Storage not configured' });
+  }
 
   if (req.method === 'GET') {
-    const guests = await readGuests(token);
-    return res.status(200).json(guests);
+    return res.status(200).json(await readGuests());
   }
 
   if (req.method === 'POST') {
-    const { name } = req.body;
+    const { name } = req.body || {};
     if (!name || typeof name !== 'string') return res.status(400).json({ error: 'Invalid name' });
     const clean = name.trim().slice(0, 40);
     if (!clean) return res.status(400).json({ error: 'Empty name' });
-    const guests = await readGuests(token);
+    const guests = await readGuests();
     if (!guests.includes(clean)) {
       guests.push(clean);
-      await writeGuests(guests, token);
+      await writeGuests(guests);
     }
     return res.status(200).json(guests);
   }
 
   if (req.method === 'DELETE') {
-    const { name, password } = req.body;
+    const { name, password } = req.body || {};
     if (password !== 'gabi') return res.status(403).json({ error: 'wrong_password' });
-    const guests = await readGuests(token);
+    const guests = await readGuests();
     const updated = guests.filter(g => g !== name);
-    await writeGuests(updated, token);
+    await writeGuests(updated);
     return res.status(200).json(updated);
   }
 
