@@ -23,6 +23,7 @@ async function writeGuests(guests) {
     access: 'public',
     token,
     addRandomSuffix: false,
+    allowOverwrite: true,
     contentType: 'application/json',
   });
 }

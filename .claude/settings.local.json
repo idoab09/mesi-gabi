@@ -12,7 +12,8 @@
       "Bash(git rm:*)",
       "Bash(vercel:*)",
       "Bash(curl:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(python3 -c \"import sys,json; print\\(json.load\\(sys.stdin\\)\\)\")"
     ]
   }
 }
