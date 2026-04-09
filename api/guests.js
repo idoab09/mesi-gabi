@@ -1,4 +1,4 @@
-import { put, list } from '@vercel/blob';
+import { put, list, download } from '@vercel/blob';
 
 const BLOB_KEY = 'masigabi-guests.json';
 
@@ -7,9 +7,9 @@ async function readGuests() {
     const token = process.env.BLOB_READ_WRITE_TOKEN;
     const { blobs } = await list({ prefix: BLOB_KEY, token });
     if (!blobs.length) return [];
-    const res = await fetch(blobs[0].url);
-    if (!res.ok) return [];
-    return await res.json();
+    const blob = await download(blobs[0].url, { token });
+    const text = await blob.text();
+    return JSON.parse(text);
   } catch (e) {
     console.error('readGuests error:', e);
     return [];
@@ -19,7 +19,7 @@ async function readGuests() {
 async function writeGuests(guests) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   await put(BLOB_KEY, JSON.stringify(guests), {
-    access: 'public',
+    access: 'private',
     token,
     addRandomSuffix: false,
     contentType: 'application/json',
@@ -42,7 +42,6 @@ export default async function handler(req, res) {
       return res.status(200).json(await readGuests());
     }
 
-    // Parse body — Vercel pre-parses JSON bodies into req.body
     const body = req.body || {};
 
     if (req.method === 'POST') {
@@ -57,8 +56,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const name = body.name;
-      const password = body.password;
+      const { name, password } = body;
       if (password !== 'gabi') return res.status(403).json({ error: 'wrong_password' });
       const guests = await readGuests();
       const updated = guests.filter(g => g !== name);
