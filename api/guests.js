@@ -8,7 +8,7 @@ async function readGuests() {
     const { blobs } = await list({ prefix: BLOB_KEY, token });
     if (!blobs.length) return [];
     // Public blob — fetch directly by URL
-    const res = await fetch(blobs[0].url);
+    const res = await fetch(blobs[0].url, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
     if (!res.ok) return [];
     return await res.json();
   } catch (e) {
