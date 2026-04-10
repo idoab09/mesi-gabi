@@ -8,11 +8,36 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script type="module">
+    import { balloons } from 'https://cdn.jsdelivr.net/npm/balloons-js/dist/index.esm.js';
+    window.balloons = function() {
+      const MAX = 6;
+      let added = 0;
+      const observer = new MutationObserver(mutations => {
+        for (const m of mutations) {
+          for (const node of m.addedNodes) {
+            if (node.nodeType === 1 && node.style && node.style.position === 'fixed') {
+              added++;
+              if (added > MAX) { node.remove(); continue; }
+              // Promote each balloon to its own compositor layer to reduce main-thread paint cost
+              node.style.willChange = 'transform';
+              node.style.contain = 'strict';
+            }
+          }
+        }
+      });
+      observer.observe(document.body, { childList: true });
+      balloons();
+      setTimeout(() => observer.disconnect(), 100);
+    };
+  </script>
 </head>
 <body>
 
 <canvas id="confetti-canvas"></canvas>
+<div id="cursor-glow"></div>
 <div id="toast"></div>
+<div id="page-wrapper">
 
 <!-- PASSWORD MODAL -->
 <div id="pw-modal">
@@ -32,45 +57,198 @@
 <!-- HERO -->
 <section class="hero">
   <div class="hero-badge">🎊 הזמנה רשמית לאירוע השנה 🎊</div>
-  <h1 class="hero-title">מסיגבי</h1>
-  <p class="hero-subtitle">הכי גדול, הכי פראי, הכי שווה!</p>
+  <h1 class="hero-title"><span class="title-letter">מ</span><span class="title-letter">ס</span><span class="title-letter">י</span><span class="title-letter">ג</span><span class="title-letter">ב</span><span class="title-letter">י</span></h1>
+  <p class="hero-subtitle">המסיבה של גבי!</p>
   <div class="hero-date-box">
-    <div class="date-pill"><span class="icon">📅</span> שישי בלילה</div>
-    <div class="date-pill"><span class="icon">📍</span> ביתינו המפואר</div>
+    <div class="date-pill"><span class="icon">📅</span> 7 באוגוסט</div>
+    <div class="date-pill"><span class="icon">📍</span> סנטוריני - יוון</div>
     <div class="date-pill"><span class="icon">⏰</span> 21:00</div>
   </div>
   <div class="hero-cta">
-    <a href="#rsvp" class="btn-party">אני בא/ה! 🦆</a>
+    <a href="#rsvp" class="btn-party" onclick="if(window.balloons) window.balloons()">אני בא/ה! 🦆</a>
   </div>
 </section>
 
-<!-- DUCK PARADE -->
-<div class="duck-parade-wrapper">
-  <div class="duck-parade-track" id="duck-parade">
-    <span class="parade-duck">🦆</span>
-    <span class="parade-duck">🦜</span>
-    <span class="parade-duck">🐸</span>
-    <span class="parade-duck">🦩</span>
-    <span class="parade-duck">🦆</span>
-    <span class="parade-duck">🐊</span>
-    <span class="parade-duck">🦆</span>
-    <span class="parade-duck">🦋</span>
-    <span class="parade-duck">🦆</span>
-    <span class="parade-duck">🐧</span>
-    <span class="parade-duck">🦆</span>
-    <span class="parade-duck">🦁</span>
-    <span class="parade-duck">🦆</span>
-    <span class="parade-duck">🐬</span>
-    <span class="parade-duck">🦆</span>
-    <span class="parade-duck">🦊</span>
-    <span class="parade-duck">🦆</span>
-    <span class="parade-duck">🐙</span>
+<section class="dj-section">
+  <h2 class="section-title">🎧 די-ג'יי מסיגבי 🎧</h2>
+  <div class="dj-deck">
+    <div class="dj-deck-bg" id="dj-deck-bg"></div>
+    <!-- TURNTABLE LEFT -->
+    <div class="turntable-wrap">
+      <div class="platter" id="platter">
+        <div class="vinyl" id="vinyl">
+          <div class="vinyl-groove g1"></div>
+          <div class="vinyl-groove g2"></div>
+          <div class="vinyl-groove g3"></div>
+          <div class="vinyl-groove g4"></div>
+          <div class="vinyl-groove g5"></div>
+          <div class="vinyl-label" id="vinyl-label">
+            <div class="label-title" id="vinyl-label-title">מסיגבי</div>
+            <div class="label-sub" id="vinyl-label-sub">🦆 Drop an album 🦆</div>
+          </div>
+        </div>
+        <div class="tonearm-pivot">
+          <div class="tonearm" id="tonearm">
+            <div class="tonearm-head"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTROLS CENTER -->
+    <div class="dj-controls">
+      <div class="dj-track-info">
+        <div class="track-name" id="track-name">גרור אלבום לפטיפון 🎵</div>
+        <div class="track-artist" id="track-artist">DJ מסיגבי</div>
+      </div>
+
+      <div class="dj-btns">
+        <button class="dj-btn" id="dj-play-btn" onclick="djTogglePlay()">
+          <span id="dj-play-icon">▶</span>
+        </button>
+      </div>
+
+      <div class="dj-volume-row">
+        <span class="vol-icon">🔈</span>
+        <input type="range" class="dj-slider vol-slider" id="dj-vol" min="0" max="1" step="0.01" value="0.8" oninput="djSetVol(this.value)">
+        <span class="vol-icon">🔊</span>
+      </div>
+
+      <div class="dj-progress-wrap" onclick="djSeek(event)" id="dj-progress-wrap">
+        <div class="dj-progress-bg">
+          <div class="dj-progress-fill" id="dj-progress-fill"></div>
+          <div class="dj-progress-head" id="dj-progress-head"></div>
+        </div>
+      </div>
+      <div class="dj-time-row">
+        <span id="dj-time-cur">0:00</span>
+        <span id="dj-time-tot">0:00</span>
+      </div>
+
+      <!-- EQUALIZER BARS -->
+      <div class="eq-bars" id="eq-bars">
+        <div class="eq-bar" id="eq0"></div>
+        <div class="eq-bar" id="eq1"></div>
+        <div class="eq-bar" id="eq2"></div>
+        <div class="eq-bar" id="eq3"></div>
+        <div class="eq-bar" id="eq4"></div>
+        <div class="eq-bar" id="eq5"></div>
+        <div class="eq-bar" id="eq6"></div>
+        <div class="eq-bar" id="eq7"></div>
+        <div class="eq-bar" id="eq8"></div>
+        <div class="eq-bar" id="eq9"></div>
+        <div class="eq-bar" id="eq10"></div>
+        <div class="eq-bar" id="eq11"></div>
+      </div>
+    </div>
   </div>
-</div>
+
+  <!-- ALBUM CRATE -->
+  <div class="crate-outer">
+    <div class="crate-handle-bar">
+      <div class="crate-handle">
+        <span class="crate-handle-icon">▼</span>
+        <span class="crate-handle-text">מגירת התקליטים</span>
+        <span class="crate-handle-hint">← גלול לעוד •  גרור אל הפטיפון</span>
+      </div>
+    </div>
+    <div class="crate-body">
+      <div class="crate-scroll-fade-right"></div>
+      <div class="album-crate" id="album-crate">
+    <div class="album-card" draggable="true"
+         data-src="assets/get-lucky.mp3"
+         data-cover="assets/get-lucky.webp"
+         data-title="Get Lucky"
+         data-artist="Daft Punk">
+      <div class="album-art" style="background-image:url('assets/get-lucky.webp')"></div>
+      <div class="album-meta">
+        <div class="album-title">Get Lucky</div>
+        <div class="album-artist">Daft Punk</div>
+      </div>
+    </div>
+    <div class="album-card" draggable="true"
+         data-src="assets/september.mp3"
+         data-cover="assets/september.webp"
+         data-title="September"
+         data-artist="Earth, Wind & Fire">
+      <div class="album-art" style="background-image:url('assets/september.webp')"></div>
+      <div class="album-meta">
+        <div class="album-title">September</div>
+        <div class="album-artist">Earth, Wind & Fire</div>
+      </div>
+    </div>
+    <div class="album-card" draggable="true"
+         data-src="assets/music-sounds-better-with-you.mp3"
+         data-cover="assets/music-sounds-better-with-you.webp"
+         data-title="Music Sounds Better With You"
+         data-artist="Stardust">
+      <div class="album-art" style="background-image:url('assets/music-sounds-better-with-you.webp')"></div>
+      <div class="album-meta">
+        <div class="album-title">Music Sounds Better With You</div>
+        <div class="album-artist">Stardust</div>
+      </div>
+    </div>
+    <div class="album-card" draggable="true"
+         data-src="assets/lady-hear-me-out-tonight.mp3"
+         data-cover="assets/lady-hear-me-out-tonight.webp"
+         data-title="Lady (Hear Me Tonight)"
+         data-artist="Modjo">
+      <div class="album-art" style="background-image:url('assets/lady-hear-me-out-tonight.webp')"></div>
+      <div class="album-meta">
+        <div class="album-title">Lady (Hear Me Tonight)</div>
+        <div class="album-artist">Modjo</div>
+      </div>
+    </div>
+    <div class="album-card" draggable="true"
+         data-src="assets/dance-till-youre-dead.mp3"
+         data-cover="assets/dance-till-youre-dead.webp"
+         data-title="Dance Till You're Dead"
+         data-artist="Mechanical Man">
+      <div class="album-art" style="background-image:url('assets/dance-till-youre-dead.webp')"></div>
+      <div class="album-meta">
+        <div class="album-title">Dance Till You're Dead</div>
+        <div class="album-artist">Mechanical Man</div>
+      </div>
+    </div>
+    <!-- NEW -->
+         <div class="album-card" draggable="true"
+         data-src="assets/celebration.mp3"
+         data-cover="assets/celebration.webp"
+         data-title="Celebration"
+         data-artist="Kool & The Gang">
+      <div class="album-art" style="background-image:url('assets/celebration.webp')"></div>
+      <div class="album-meta">
+        <div class="album-title">Celebration</div>
+        <div class="album-artist">Kool & The Gang</div>
+      </div>
+    </div>
+
+             <div class="album-card" draggable="true"
+         data-src="assets/canned-heat.mp3"
+         data-cover="assets/canned-heat.webp"
+         data-title="Canned Heat"
+         data-artist="Jamiroquai">
+      <div class="album-art" style="background-image:url('assets/canned-heat.webp')"></div>
+      <div class="album-meta">
+        <div class="album-title">Canned Heat</div>
+        <div class="album-artist">Jamiroquai</div>
+      </div>
+    </div>
+  </div>
+
+    </div><!-- .crate-body -->
+  </div><!-- .crate-outer -->
+
+  <!-- Flying vinyl animation overlay -->
+  <div id="flying-vinyl" aria-hidden="true"></div>
+
+  <audio id="dj-audio" preload="metadata"></audio>
+</section>
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
 
 <!-- COUNTDOWN -->
 <section class="countdown-section">
-  <p class="countdown-title">⏳ עוד כמה זמן עד המסיבה?</p>
+  <p class="section-title">⏳ עוד כמה זמן עד המסיבה?</p>
   <div class="countdown-boxes">
     <div class="cd-box"><span class="cd-num" id="cd-days">00</span><span class="cd-label">ימים</span></div>
     <div class="cd-box"><span class="cd-num" id="cd-hours">00</span><span class="cd-label">שעות</span></div>
@@ -78,6 +256,8 @@
     <div class="cd-box"><span class="cd-num" id="cd-secs">00</span><span class="cd-label">שניות</span></div>
   </div>
 </section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
 
 <!-- ANIMALS -->
 <section class="animals-section">
@@ -94,6 +274,8 @@
   </div>
   <p style="color:rgba(255,255,255,0.4);font-size:0.85rem;margin-top:1rem;">לחצו על החיות לגלות מה הן חושבות על המסיבה!</p>
 </section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
 
 <!-- MINIGAMES -->
 <section class="games-section">
@@ -174,15 +356,17 @@
   </div>
 </section>
 
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
 <!-- INFO + RSVP -->
 <section class="info-section" id="rsvp">
   <div class="info-card">
     <h2>פרטי המסיבה 🎊</h2>
     <div class="info-rows">
-      <div class="info-row"><span class="row-icon">📅</span><span>שישי, ה-18 לאפריל 2026</span></div>
+      <div class="info-row"><span class="row-icon">📅</span><span>7 באוגוסט</span></div>
       <div class="info-row"><span class="row-icon">⏰</span><span>21:00 — כל הלילה!</span></div>
-      <div class="info-row"><span class="row-icon">📍</span><span>בית המסיבות, רחוב השמחה 1</span></div>
-      <div class="info-row"><span class="row-icon">👗</span><span>קוד לבוש: פסטיבלי ופראי!</span></div>
+      <div class="info-row"><span class="row-icon">📍</span><span>סנטוריני - יוון</span></div>
+      <div class="info-row"><span class="row-icon">🥋</span><span>קוד לבוש: גי של קארטה!</span></div>
       <div class="info-row"><span class="row-icon">🦆</span><span>ברווזים — מוזמנים בחום!</span></div>
     </div>
 
@@ -212,11 +396,16 @@
   </div>
 </section>
 
+<!-- DJ PLAYER -->
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
 <footer class="party-footer">
-  <p>עשוי עם <span>❤️</span> ו-<span>🦆</span> עבור המסיבה של <span>מסיגבי</span></p>
-  <p style="margin-top:0.5rem;font-size:0.75rem;">כל הברווזים שמורות © 2026</p>
+  <p>עשוי עם <span>❤️</span> ו-<span>🦆</span> עבור המסיבה של <span>גבי</span></p>
+  <p style="margin-top:0.5rem;font-size:0.75rem;">כל הברווזים שמורים  2026 ©</p>
 </footer>
 
+</div><!-- #page-wrapper -->
 <script src="main.js"></script>
 </body>
 </html>

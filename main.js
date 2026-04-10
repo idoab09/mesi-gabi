@@ -1,3 +1,125 @@
+// ========== CURSOR GLOW ==========
+const cursorGlow = document.getElementById('cursor-glow');
+let glowX = window.innerWidth / 2, glowY = window.innerHeight / 2;
+let currentGlowX = glowX, currentGlowY = glowY;
+
+window.addEventListener('mousemove', e => {
+  glowX = e.clientX;
+  glowY = e.clientY;
+});
+
+function animateGlow() {
+  currentGlowX += (glowX - currentGlowX) * 0.07;
+  currentGlowY += (glowY - currentGlowY) * 0.07;
+  cursorGlow.style.left = currentGlowX + 'px';
+  cursorGlow.style.top = currentGlowY + 'px';
+  requestAnimationFrame(animateGlow);
+}
+animateGlow();
+
+
+// ========== SMOOTH SCROLL ==========
+let scrollTarget = window.scrollY;
+let scrollRaf = null;
+
+function clampScroll(y) {
+  return Math.max(0, Math.min(y, document.body.scrollHeight - window.innerHeight));
+}
+
+function tickScroll() {
+  const current = window.scrollY;
+  const diff = scrollTarget - current;
+  if (Math.abs(diff) < 0.5) {
+    window.scrollTo(0, scrollTarget);
+    scrollRaf = null;
+    return;
+  }
+  window.scrollTo(0, current + diff * 0.1);
+  scrollRaf = requestAnimationFrame(tickScroll);
+}
+
+function nudgeScroll(delta) {
+  scrollTarget = clampScroll(scrollTarget + delta);
+  if (!scrollRaf) scrollRaf = requestAnimationFrame(tickScroll);
+}
+
+// Wheel: intercept only when not over the native scrollbar (pointer within page width)
+window.addEventListener('wheel', function(e) {
+  // Scrollbar sits outside window.innerWidth — skip if pointer is in scrollbar gutter
+  if (e.clientX >= window.innerWidth) return;
+  e.preventDefault();
+  // Scale delta — trackpads send small values, wheels send large (typically 100/120)
+  const scale = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? window.innerHeight : 1;
+  nudgeScroll(e.deltaY * scale * 0.8);
+}, { passive: false });
+
+// Touch: momentum scroll
+let touchStartY = 0;
+let touchLastY = 0;
+let touchVelocity = 0;
+let touchLastTime = 0;
+let touchMomentumRaf = null;
+
+window.addEventListener('touchstart', e => {
+  touchStartY = touchLastY = e.touches[0].clientY;
+  touchVelocity = 0;
+  touchLastTime = performance.now();
+  if (touchMomentumRaf) { cancelAnimationFrame(touchMomentumRaf); touchMomentumRaf = null; }
+  scrollTarget = window.scrollY;
+}, { passive: true });
+
+window.addEventListener('touchmove', e => {
+  const y = e.touches[0].clientY;
+  const now = performance.now();
+  const dt = now - touchLastTime || 1;
+  touchVelocity = (touchLastY - y) / dt;
+  scrollTarget = clampScroll(scrollTarget + (touchLastY - y));
+  touchLastY = y;
+  touchLastTime = now;
+  if (!scrollRaf) scrollRaf = requestAnimationFrame(tickScroll);
+}, { passive: true });
+
+window.addEventListener('touchend', () => {
+  // Fling momentum
+  let vel = touchVelocity * 16; // scale to per-frame
+  function momentum() {
+    if (Math.abs(vel) < 0.3) return;
+    scrollTarget = clampScroll(scrollTarget + vel * 8);
+    vel *= 0.88;
+    if (!scrollRaf) scrollRaf = requestAnimationFrame(tickScroll);
+    touchMomentumRaf = requestAnimationFrame(momentum);
+  }
+  touchMomentumRaf = requestAnimationFrame(momentum);
+}, { passive: true });
+
+// Anchor links
+function smoothScrollTo(y, duration) {
+  const start = window.scrollY;
+  const dist = y - start;
+  if (Math.abs(dist) < 2) return;
+  const startTime = performance.now();
+  function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+  function step(now) {
+    const p = Math.min((now - startTime) / duration, 1);
+    const pos = start + dist * ease(p);
+    window.scrollTo(0, pos);
+    scrollTarget = pos;
+    if (p < 1) requestAnimationFrame(step);
+    else scrollTarget = y;
+  }
+  requestAnimationFrame(step);
+}
+
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (!target) return;
+    const y = target.getBoundingClientRect().top + window.scrollY;
+    smoothScrollTo(y, 750);
+  });
+});
+
 // ========== CONFETTI ENGINE ==========
 const canvas = document.getElementById('confetti-canvas');
 const ctx = canvas.getContext('2d');
@@ -103,7 +225,7 @@ function animateConfetti() {
     drawConfettiParticle(p);
   }
   const ambientCount = confettiParticles.filter(p => !p.burst).length;
-  if (ambientCount < 20 && Math.random() < 0.05) {
+  if (ambientCount < 3 && Math.random() < 0.008) {
     confettiParticles.push(createAmbientParticle());
   }
   requestAnimationFrame(animateConfetti);
@@ -220,7 +342,7 @@ function endDuckGame() {
   duckTimerBar.style.width = '0%';
   saveDuckScore(duckScore);
   showToast('המשחק נגמר! קלטת ' + duckScore + ' ברווזים! 🦆');
-  if (duckScore >= 5) createConfetti(canvas.width/2, canvas.height/2, 40, true);
+  if (duckScore >= 5) createConfetti(canvas.width/2, canvas.height/2, 20, true);
 }
 
 duckEl.addEventListener('click', onDuckClick);
@@ -237,7 +359,7 @@ function onDuckClick(e) {
   moveDuck();
   if (duckScore % 5 === 0) {
     const rect = duckArena.getBoundingClientRect();
-    createConfetti(rect.left + rect.width / 2, rect.top, 20, true);
+    createConfetti(rect.left + rect.width / 2, rect.top, 10, true);
   }
 }
 
@@ -304,7 +426,7 @@ function endBalloonGame() {
   balloonBtn.textContent = 'שחק שוב! 🎈';
   balloonTimerBarEl.style.width = '0%';
   showToast('פוצצת ' + balloonScore + ' בלונים! 🎈');
-  if (balloonScore >= 10) createConfetti(canvas.width/2, canvas.height/2, 50, true);
+  if (balloonScore >= 10) createConfetti(canvas.width/2, canvas.height/2, 25, true);
 }
 
 function spawnPopBalloon() {
@@ -358,8 +480,8 @@ function fireCannon() {
 
   const cx = canvas.width / 2;
   const cy = canvas.height / 2;
-  createConfetti(cx, cy, 60, true);
-  createConfetti(Math.random() * canvas.width, Math.random() * canvas.height / 2, 30, true);
+  createConfetti(cx, cy, 25, true);
+  createConfetti(Math.random() * canvas.width, Math.random() * canvas.height / 2, 12, true);
 
   const msgs = [
     '💥 בום! קונפטי בכל מקום!',
@@ -375,7 +497,7 @@ function fireCannon() {
 }
 
 // ========== COUNTDOWN TIMER ==========
-const partyDate = new Date('2026-04-18T21:00:00');
+const partyDate = new Date('2026-08-07T21:00:00');
 
 function updateCountdown() {
   const now = new Date();
@@ -494,7 +616,8 @@ function sendRSVP(coming) {
   document.getElementById('rsvp-success-msg').textContent = msg;
   if (coming) {
     addGuest(name);
-    createConfetti(canvas.width/2, canvas.height/2, 80, true);
+    createConfetti(canvas.width/2, canvas.height/2, 30, true);
+    if (window.balloons) window.balloons();
     showToast('🎊 ' + name + ' מגיע/ה! יאיי!');
   }
 }
@@ -546,7 +669,7 @@ function flipCard(card) {
       memFlipped = [];
       memLocked = false;
       if (memMatched === MEMORY_EMOJIS.length) {
-        createConfetti(canvas.width/2, canvas.height/3, 60, true);
+        createConfetti(canvas.width/2, canvas.height/3, 25, true);
         showToast('🏆 מצאת את כל הזוגות! ' + memScore + ' נקודות!');
       }
     } else {
@@ -666,7 +789,7 @@ function endWhackGame() {
   btn.disabled = false;
   btn.textContent = 'שחק שוב! 🔨';
   showToast('סיימת עם ' + whackScore + ' מכות! 🔨');
-  if (whackScore >= 15) createConfetti(canvas.width/2, canvas.height/2, 60, true);
+  if (whackScore >= 15) createConfetti(canvas.width/2, canvas.height/2, 25, true);
 }
 
 // ========== SIMON SAYS ==========
@@ -774,14 +897,14 @@ async function simonPress(i) {
     document.getElementById('simon-status').textContent = `❌ טעות! הגעת לשלב ${simonLevel}`;
     document.getElementById('simon-level').textContent = 'נסה שוב!';
     setSimonBtnsDisabled(true);
-    if (simonLevel >= 5) createConfetti(canvas.width/2, canvas.height/2, 30, true);
+    if (simonLevel >= 5) createConfetti(canvas.width/2, canvas.height/2, 15, true);
     return;
   }
 
   simonPlayerIdx++;
   if (simonPlayerIdx === simonSeq.length) {
     document.getElementById('simon-status').textContent = '✅ כל הכבוד! עובר לשלב הבא...';
-    if (simonLevel % 3 === 0) createConfetti(canvas.width/2, canvas.height/2, 25, true);
+    if (simonLevel % 3 === 0) createConfetti(canvas.width/2, canvas.height/2, 12, true);
     await sleep(900);
     nextSimonRound();
   }
@@ -800,3 +923,592 @@ document.addEventListener('click', (e) => {
     setTimeout(() => sp.remove(), 800);
   }
 });
+
+// ========== DJ PLAYER ==========
+(function() {
+  const audio        = document.getElementById('dj-audio');
+  const vinyl        = document.getElementById('vinyl');
+  const platter      = document.getElementById('platter');
+  const turntableWrap = document.querySelector('.turntable-wrap');
+  const tonearm      = document.getElementById('tonearm');
+  const playBtn      = document.getElementById('dj-play-btn');
+  const playIcon     = document.getElementById('dj-play-icon');
+  const fill         = document.getElementById('dj-progress-fill');
+  const head         = document.getElementById('dj-progress-head');
+  const timeCur      = document.getElementById('dj-time-cur');
+  const timeTot      = document.getElementById('dj-time-tot');
+  const trackName    = document.getElementById('track-name');
+  const trackArtist  = document.getElementById('track-artist');
+  const vinylLabelTitle = document.getElementById('vinyl-label-title');
+  const vinylLabelSub   = document.getElementById('vinyl-label-sub');
+  const eqBars       = Array.from(document.querySelectorAll('.eq-bar'));
+  const volSlider    = document.getElementById('dj-vol');
+  const albumCards   = Array.from(document.querySelectorAll('.album-card'));
+  const flyingVinyl  = document.getElementById('flying-vinyl');
+
+  let playing = false;
+  let eqRaf = null;
+  let currentTrackSrc = null;
+
+  // Format seconds -> M:SS
+  function fmt(s) {
+    s = Math.floor(s) || 0;
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  audio.addEventListener('loadedmetadata', () => {
+    timeTot.textContent = fmt(audio.duration);
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    if (scratching) return; // don't override during scratch
+    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    fill.style.width = pct + '%';
+    head.style.left  = pct + '%';
+    timeCur.textContent = fmt(audio.currentTime);
+  });
+
+  audio.addEventListener('ended', () => {
+    setPlaying(false);
+  });
+
+  window.djTogglePlay = function() {
+    if (!currentTrackSrc) {
+      // Flash the crate label to hint the user what to do
+      const crate = document.getElementById('album-crate');
+      if (crate) {
+        crate.style.transition = 'box-shadow 0.3s';
+        crate.style.boxShadow = '0 0 40px rgba(255,45,122,0.6)';
+        setTimeout(() => { crate.style.boxShadow = ''; }, 600);
+      }
+      return;
+    }
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    } else {
+      audio.play().then(() => setPlaying(true)).catch(() => {});
+    }
+  };
+
+  window.djSetVol = function(v) {
+    audio.volume = v;
+  };
+
+  window.djSeek = function(e) {
+    const wrap = document.getElementById('dj-progress-wrap');
+    const rect = wrap.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    if (audio.duration) audio.currentTime = ratio * audio.duration;
+  };
+
+  function setPlaying(state) {
+    playing = state;
+    if (state) {
+      vinyl.classList.add('playing');
+      platter.classList.add('playing');
+      tonearm.classList.add('on-record');
+      playIcon.textContent = '⏸';
+      playBtn.classList.add('is-playing');
+      startEQ();
+    } else {
+      vinyl.classList.remove('playing');
+      platter.classList.remove('playing');
+      tonearm.classList.remove('on-record');
+      playIcon.textContent = '▶';
+      playBtn.classList.remove('is-playing');
+      stopEQ();
+    }
+  }
+
+  // ---- SCRATCH ----
+  let scratching = false;
+  let scratchStartAngle = 0;   // angle of pointer at drag start (degrees)
+  let scratchStartTime  = 0;   // audio.currentTime at drag start
+  let scratchLastAngle  = 0;
+  let scratchLastTime   = 0;   // wall-clock ms
+  let wasPlaying = false;
+  let scratchVinylAngle = 0;   // current visual rotation of vinyl during scratch
+
+  // Web Audio for pitch-shifted scratch playback
+  let audioCtx = null;
+  let scratchSource = null;
+  let scratchGain = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function getAngleFromEvent(e) {
+    const rect = vinyl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI);
+  }
+
+  function angleDiff(a, b) {
+    let d = a - b;
+    if (d > 180)  d -= 360;
+    if (d < -180) d += 360;
+    return d;
+  }
+
+  vinyl.addEventListener('mousedown',  startScratch);
+  vinyl.addEventListener('touchstart', startScratch, { passive: true });
+
+  function startScratch(e) {
+    scratching = true;
+    wasPlaying = playing;
+    if (playing) audio.pause();
+    vinyl.classList.add('scratching');
+    vinyl.classList.remove('playing');
+
+    scratchStartAngle = getAngleFromEvent(e);
+    scratchLastAngle  = scratchStartAngle;
+    scratchStartTime  = audio.currentTime;
+    scratchLastTime   = performance.now();
+
+    // Freeze visual angle at current rotation
+    const computed = getComputedStyle(vinyl).transform;
+    if (computed && computed !== 'none') {
+      const m = computed.match(/matrix\(([^)]+)\)/);
+      if (m) {
+        const vals = m[1].split(',');
+        scratchVinylAngle = Math.atan2(parseFloat(vals[1]), parseFloat(vals[0])) * (180 / Math.PI);
+      }
+    }
+    vinyl.style.transform = `rotate(${scratchVinylAngle}deg)`;
+    vinyl.style.animationPlayState = 'paused';
+
+    window.addEventListener('mousemove',  doScratch);
+    window.addEventListener('mouseup',    endScratch);
+    window.addEventListener('touchmove',  doScratch, { passive: true });
+    window.addEventListener('touchend',   endScratch);
+  }
+
+  function doScratch(e) {
+    if (!scratching) return;
+    const now = performance.now();
+    const angle = getAngleFromEvent(e);
+    const delta = angleDiff(angle, scratchLastAngle);
+
+    // Rotate vinyl visually
+    scratchVinylAngle += delta;
+    vinyl.style.transform = `rotate(${scratchVinylAngle}deg)`;
+
+    // Map rotation to audio time: one full rotation = 2.4s of audio (matches spin speed)
+    const secondsPerDegree = 2.4 / 360;
+    const timeDelta = delta * secondsPerDegree;
+    let newTime = audio.currentTime + timeDelta;
+    newTime = Math.max(0, Math.min(audio.duration || 0, newTime));
+    audio.currentTime = newTime;
+
+    // Update progress bar during scratch
+    const pct = audio.duration ? (newTime / audio.duration) * 100 : 0;
+    fill.style.width = pct + '%';
+    head.style.left  = pct + '%';
+    timeCur.textContent = fmt(newTime);
+
+    // Pitch/speed effect: play a tiny burst at adjusted rate
+    const dt = now - scratchLastTime;
+    if (dt > 0 && Math.abs(delta) > 0.5) {
+      const degreesPerMs = delta / dt;
+      // 360 deg in 2400ms = 0.15 deg/ms at normal speed → playback rate
+      const rate = Math.max(-4, Math.min(4, degreesPerMs / 0.15));
+      playScratchBurst(newTime, rate);
+    }
+
+    scratchLastAngle = angle;
+    scratchLastTime  = now;
+  }
+
+  function endScratch() {
+    if (!scratching) return;
+    scratching = false;
+    vinyl.classList.remove('scratching');
+    vinyl.style.transform = '';
+    vinyl.style.animationPlayState = '';
+
+    stopScratchBurst();
+
+    if (wasPlaying) {
+      audio.play();
+      setPlaying(true);
+    }
+
+    window.removeEventListener('mousemove',  doScratch);
+    window.removeEventListener('mouseup',    endScratch);
+    window.removeEventListener('touchmove',  doScratch);
+    window.removeEventListener('touchend',   endScratch);
+  }
+
+  // Play audio at a custom playback rate for scratch sound
+  let scratchBurstSource = null;
+  let scratchBuffer = null;
+  let scratchBufferSrc = null;
+  let scratchBufferLoading = null;
+
+  async function ensureScratchBuffer() {
+    if (!currentTrackSrc) return null;
+    if (scratchBuffer && scratchBufferSrc === currentTrackSrc) return scratchBuffer;
+    if (scratchBufferLoading === currentTrackSrc) return null;
+    const src = currentTrackSrc;
+    scratchBufferLoading = src;
+    try {
+      const ctx = getAudioCtx();
+      const resp = await fetch(src);
+      const ab   = await resp.arrayBuffer();
+      // If the track changed while we were loading, discard
+      if (currentTrackSrc !== src) return null;
+      scratchBuffer = await ctx.decodeAudioData(ab);
+      scratchBufferSrc = src;
+    } catch(err) {
+      // ignore
+    } finally {
+      if (scratchBufferLoading === src) scratchBufferLoading = null;
+    }
+    return scratchBuffer;
+  }
+
+  function playScratchBurst(atTime, rate) {
+    if (!scratchBuffer) return;
+    const ctx = getAudioCtx();
+
+    // Kill previous burst
+    if (scratchBurstSource) {
+      try { scratchBurstSource.stop(); } catch(e) {}
+      scratchBurstSource = null;
+    }
+
+    if (rate === 0) return;
+
+    const source = ctx.createBufferSource();
+    source.buffer = scratchBuffer;
+    source.playbackRate.value = Math.abs(rate);
+
+    const gain = ctx.createGain();
+    // Boost scratch volume slightly, apply soft ramp
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(audio.volume * 1.1, ctx.currentTime + 0.01);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
+
+    source.connect(gain);
+    gain.connect(ctx.destination);
+
+    // Clamp offset within buffer
+    const offset = Math.max(0, Math.min(atTime, scratchBuffer.duration - 0.001));
+    source.start(0, offset, 0.08);
+    scratchBurstSource = source;
+  }
+
+  function stopScratchBurst() {
+    if (scratchBurstSource) {
+      try { scratchBurstSource.stop(); } catch(e) {}
+      scratchBurstSource = null;
+    }
+  }
+
+  // ---- EQ ----
+  const eqTargets = eqBars.map(() => 4);
+
+  function animateEQ() {
+    eqBars.forEach((bar, i) => {
+      if (Math.random() < 0.15) {
+        eqTargets[i] = 4 + Math.random() * 34;
+      }
+      const current = parseFloat(bar.style.height) || 4;
+      const next = current + (eqTargets[i] - current) * 0.18;
+      bar.style.height = next + 'px';
+    });
+    eqRaf = requestAnimationFrame(animateEQ);
+  }
+
+  function startEQ() { if (!eqRaf) animateEQ(); }
+
+  function stopEQ() {
+    if (eqRaf) { cancelAnimationFrame(eqRaf); eqRaf = null; }
+    eqBars.forEach(b => b.style.height = '4px');
+    eqTargets.fill(4);
+  }
+
+  // Set initial volume
+  audio.volume = parseFloat(volSlider.value);
+
+  // ---- TRACK LOADING ----
+  // Distinct accent colors for each album so the flying vinyl label matches
+  const LABEL_COLORS = {
+    'assets/get-lucky.mp3': '#FFD600',
+    'assets/september.mp3': '#FF6B00',
+    'assets/music-sounds-better-with-you.mp3': '#00D4C8',
+    'assets/lady-hear-me-out-tonight.mp3': '#FF2D7A',
+    'assets/dance-till-youre-dead.mp3': '#A3FF00',
+    'assets/celebration.mp3': '#FF9500',
+    'assets/canned-heat.mp3': '#7C3AED',
+  };
+
+  const deckBg = document.getElementById('dj-deck-bg');
+
+  function loadTrack(card, autoplay) {
+    const src    = card.dataset.src;
+    const title  = card.dataset.title;
+    const artist = card.dataset.artist;
+    currentTrackSrc = src;
+    audio.src = src;
+    audio.load();
+    trackName.textContent = title;
+    trackArtist.textContent = artist;
+    vinylLabelTitle.textContent = title.length > 14 ? title.slice(0, 12) + '…' : title;
+    vinylLabelSub.textContent = artist;
+    // Tint vinyl label
+    const label = document.getElementById('vinyl-label');
+    const color = LABEL_COLORS[src] || '#FF2D7A';
+    label.style.background = `linear-gradient(135deg, ${color}, #7C3AED)`;
+    // Update deck background with album art
+    if (deckBg && card.dataset.cover) {
+      deckBg.classList.remove('visible');
+      setTimeout(() => {
+        deckBg.style.backgroundImage = `url('${card.dataset.cover}')`;
+        deckBg.classList.add('visible');
+      }, 300);
+    }
+    // Mark which album is currently playing
+    albumCards.forEach(c => c.classList.toggle('now-playing', c === card));
+    // Pre-load scratch buffer for this track
+    scratchBuffer = null;
+    scratchBufferSrc = null;
+    ensureScratchBuffer();
+    if (autoplay) {
+      const playPromise = audio.play();
+      if (playPromise) {
+        playPromise.then(() => setPlaying(true)).catch(() => setPlaying(false));
+      } else {
+        setPlaying(true);
+      }
+    }
+  }
+
+  // ---- VINYL DRAG IMAGE ----
+  // Draw a vinyl record onto a canvas and use it as the drag ghost
+  function makeVinylDragImage(accentColor) {
+    const size = 120;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx2 = c.getContext('2d');
+    const cx = size / 2, cy = size / 2, r = size / 2 - 1;
+    // Outer disc
+    ctx2.beginPath();
+    ctx2.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx2.fillStyle = '#0a0010';
+    ctx2.fill();
+    // Groove rings
+    [0.9, 0.75, 0.6, 0.45].forEach(frac => {
+      ctx2.beginPath();
+      ctx2.arc(cx, cy, r * frac, 0, Math.PI * 2);
+      ctx2.strokeStyle = 'rgba(255,255,255,0.07)';
+      ctx2.lineWidth = 1;
+      ctx2.stroke();
+    });
+    // Label circle
+    ctx2.beginPath();
+    ctx2.arc(cx, cy, r * 0.28, 0, Math.PI * 2);
+    ctx2.fillStyle = accentColor || '#FF2D7A';
+    ctx2.fill();
+    // Center hole
+    ctx2.beginPath();
+    ctx2.arc(cx, cy, r * 0.05, 0, Math.PI * 2);
+    ctx2.fillStyle = '#000';
+    ctx2.fill();
+    // Outer glow border
+    ctx2.beginPath();
+    ctx2.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx2.strokeStyle = 'rgba(124,58,237,0.6)';
+    ctx2.lineWidth = 2;
+    ctx2.stroke();
+    // Position off-screen so it doesn't flash visible
+    c.style.cssText = 'position:fixed;top:-200px;left:-200px;pointer-events:none;';
+    document.body.appendChild(c);
+    return c;
+  }
+
+  // ---- DRAG & DROP ----
+  let draggingCard = null;
+
+  albumCards.forEach(card => {
+    card.addEventListener('dragstart', e => {
+      draggingCard = card;
+      setTimeout(() => card.classList.add('dragging'), 0);
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/plain', card.dataset.src);
+        // Use vinyl canvas as drag image, centered under cursor
+        const color = LABEL_COLORS[card.dataset.src] || '#FF2D7A';
+        const ghost = makeVinylDragImage(color);
+        e.dataTransfer.setDragImage(ghost, 60, 60);
+        setTimeout(() => ghost.remove(), 0);
+      }
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      platter.classList.remove('drop-target');
+      turntableWrap.classList.remove('drop-target');
+      draggingCard = null;
+    });
+
+    // Touch fallback — simulate drag with a ghost element
+    let touchGhost = null;
+    let touchStartPos = null;
+    card.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      touchStartPos = { x: t.clientX, y: t.clientY };
+      draggingCard = card;
+    }, { passive: true });
+
+    card.addEventListener('touchmove', e => {
+      if (!draggingCard) return;
+      const t = e.touches[0];
+      // Only start dragging after 10px movement
+      if (!touchGhost) {
+        const dx = t.clientX - touchStartPos.x;
+        const dy = t.clientY - touchStartPos.y;
+        if (Math.hypot(dx, dy) < 10) return;
+        touchGhost = card.cloneNode(true);
+        touchGhost.style.cssText = `position:fixed; pointer-events:none; z-index:10001; width:${card.offsetWidth}px; opacity:0.85; transform:scale(1.05); transition:none;`;
+        document.body.appendChild(touchGhost);
+        card.classList.add('dragging');
+      }
+      touchGhost.style.left = (t.clientX - card.offsetWidth / 2) + 'px';
+      touchGhost.style.top  = (t.clientY - card.offsetHeight / 2) + 'px';
+      // Check if over platter
+      const pr = platter.getBoundingClientRect();
+      const over = t.clientX >= pr.left && t.clientX <= pr.right &&
+                   t.clientY >= pr.top  && t.clientY <= pr.bottom;
+      platter.classList.toggle('drop-target', over);
+      turntableWrap.classList.toggle('drop-target', over);
+    }, { passive: true });
+
+    card.addEventListener('touchend', e => {
+      if (touchGhost) {
+        const t = e.changedTouches[0];
+        const pr = platter.getBoundingClientRect();
+        const over = t.clientX >= pr.left && t.clientX <= pr.right &&
+                     t.clientY >= pr.top  && t.clientY <= pr.bottom;
+        touchGhost.remove();
+        touchGhost = null;
+        card.classList.remove('dragging');
+        if (over) dropAlbumOnPlatter(card);
+      }
+      platter.classList.remove('drop-target');
+      turntableWrap.classList.remove('drop-target');
+      draggingCard = null;
+    });
+  });
+
+  // Drop zone: the turntable wrap
+  function isValidDropZone(target) {
+    return target === platter || platter.contains(target) ||
+           target === turntableWrap || turntableWrap.contains(target);
+  }
+
+  ['dragenter', 'dragover'].forEach(evt => {
+    turntableWrap.addEventListener(evt, e => {
+      if (!draggingCard) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+      platter.classList.add('drop-target');
+      turntableWrap.classList.add('drop-target');
+    });
+  });
+
+  turntableWrap.addEventListener('dragleave', e => {
+    // Only remove if we're actually leaving the wrap (not moving to a child)
+    if (e.relatedTarget && turntableWrap.contains(e.relatedTarget)) return;
+    platter.classList.remove('drop-target');
+    turntableWrap.classList.remove('drop-target');
+  });
+
+  turntableWrap.addEventListener('drop', e => {
+    e.preventDefault();
+    platter.classList.remove('drop-target');
+    turntableWrap.classList.remove('drop-target');
+    if (draggingCard) dropAlbumOnPlatter(draggingCard);
+  });
+
+  // ---- DROP ANIMATION ----
+  function dropAlbumOnPlatter(card) {
+    const src = card.dataset.src;
+    // Already playing this track? Just ensure it plays.
+    if (currentTrackSrc === src) {
+      if (!playing) {
+        audio.play().then(() => setPlaying(true)).catch(() => {});
+      }
+      return;
+    }
+
+    // Stop any current playback
+    const wasPlaying = playing;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    }
+
+    // Eject animation on the card
+    card.classList.add('ejecting');
+
+    // Compute flight path: from album center → platter center
+    const startRect = card.querySelector('.album-art').getBoundingClientRect();
+    const endRect   = platter.getBoundingClientRect();
+    const fvW       = flyingVinyl.offsetWidth || 190;
+    const fvH       = flyingVinyl.offsetHeight || 190;
+    const startX    = startRect.left + startRect.width / 2 - fvW / 2;
+    const startY    = startRect.top  + startRect.height / 2 - fvH / 2;
+    const endX      = endRect.left   + endRect.width / 2  - fvW / 2;
+    const endY      = endRect.top    + endRect.height / 2 - fvH / 2;
+
+    // Set accent color and CSS vars for the keyframe
+    const color = LABEL_COLORS[src] || '#FF2D7A';
+    flyingVinyl.style.setProperty('--fv-label-color', color);
+    flyingVinyl.style.setProperty('--fv-start-x', startX + 'px');
+    flyingVinyl.style.setProperty('--fv-start-y', startY + 'px');
+    flyingVinyl.style.setProperty('--fv-end-x',   endX   + 'px');
+    flyingVinyl.style.setProperty('--fv-end-y',   endY   + 'px');
+
+    // Hide the real vinyl briefly so it looks like the flying one lands on it
+    vinyl.style.opacity = '0';
+    platter.classList.add('drop-target');
+
+    // Trigger the animation
+    flyingVinyl.classList.remove('animating');
+    void flyingVinyl.offsetWidth; // reflow to restart animation
+    flyingVinyl.classList.add('animating');
+
+    // When the animation ends, load the track & start playing
+    const onEnd = () => {
+      flyingVinyl.removeEventListener('animationend', onEnd);
+      flyingVinyl.classList.remove('animating');
+      vinyl.style.opacity = '';
+      platter.classList.remove('drop-target');
+      card.classList.remove('ejecting');
+      loadTrack(card, true);
+    };
+    flyingVinyl.addEventListener('animationend', onEnd);
+
+    // Safety timeout in case animationend doesn't fire
+    setTimeout(() => {
+      if (flyingVinyl.classList.contains('animating')) onEnd();
+    }, 1200);
+  }
+})();
+
+// Scroll hint: 1.5s after load, nudge the crate right then snap back
+setTimeout(() => {
+  const crate = document.getElementById('album-crate');
+  if (!crate || crate.scrollWidth <= crate.clientWidth) return;
+  // Smoothly scroll right to peek at the next record
+  crate.scrollTo({ left: 140, behavior: 'smooth' });
+  setTimeout(() => crate.scrollTo({ left: 0, behavior: 'smooth' }), 700);
+}, 1500);
+
