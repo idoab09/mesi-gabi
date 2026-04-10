@@ -18,105 +18,12 @@ function animateGlow() {
 animateGlow();
 
 
-// ========== SMOOTH SCROLL ==========
-let scrollTarget = window.scrollY;
-let scrollRaf = null;
-
-function clampScroll(y) {
-  return Math.max(0, Math.min(y, document.body.scrollHeight - window.innerHeight));
-}
-
-function tickScroll() {
-  const current = window.scrollY;
-  const diff = scrollTarget - current;
-  if (Math.abs(diff) < 0.5) {
-    window.scrollTo(0, scrollTarget);
-    scrollRaf = null;
-    return;
-  }
-  window.scrollTo(0, current + diff * 0.1);
-  scrollRaf = requestAnimationFrame(tickScroll);
-}
-
-function nudgeScroll(delta) {
-  scrollTarget = clampScroll(scrollTarget + delta);
-  if (!scrollRaf) scrollRaf = requestAnimationFrame(tickScroll);
-}
-
-// Wheel: intercept only when not over the native scrollbar (pointer within page width)
-window.addEventListener('wheel', function(e) {
-  // Scrollbar sits outside window.innerWidth — skip if pointer is in scrollbar gutter
-  if (e.clientX >= window.innerWidth) return;
-  e.preventDefault();
-  // Scale delta — trackpads send small values, wheels send large (typically 100/120)
-  const scale = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? window.innerHeight : 1;
-  nudgeScroll(e.deltaY * scale * 0.8);
-}, { passive: false });
-
-// Touch: momentum scroll
-let touchStartY = 0;
-let touchLastY = 0;
-let touchVelocity = 0;
-let touchLastTime = 0;
-let touchMomentumRaf = null;
-
-window.addEventListener('touchstart', e => {
-  touchStartY = touchLastY = e.touches[0].clientY;
-  touchVelocity = 0;
-  touchLastTime = performance.now();
-  if (touchMomentumRaf) { cancelAnimationFrame(touchMomentumRaf); touchMomentumRaf = null; }
-  scrollTarget = window.scrollY;
-}, { passive: true });
-
-window.addEventListener('touchmove', e => {
-  const y = e.touches[0].clientY;
-  const now = performance.now();
-  const dt = now - touchLastTime || 1;
-  touchVelocity = (touchLastY - y) / dt;
-  scrollTarget = clampScroll(scrollTarget + (touchLastY - y));
-  touchLastY = y;
-  touchLastTime = now;
-  if (!scrollRaf) scrollRaf = requestAnimationFrame(tickScroll);
-}, { passive: true });
-
-window.addEventListener('touchend', () => {
-  // Fling momentum
-  let vel = touchVelocity * 16; // scale to per-frame
-  function momentum() {
-    if (Math.abs(vel) < 0.3) return;
-    scrollTarget = clampScroll(scrollTarget + vel * 8);
-    vel *= 0.88;
-    if (!scrollRaf) scrollRaf = requestAnimationFrame(tickScroll);
-    touchMomentumRaf = requestAnimationFrame(momentum);
-  }
-  touchMomentumRaf = requestAnimationFrame(momentum);
-}, { passive: true });
-
-// Anchor links
-function smoothScrollTo(y, duration) {
-  const start = window.scrollY;
-  const dist = y - start;
-  if (Math.abs(dist) < 2) return;
-  const startTime = performance.now();
-  function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
-  function step(now) {
-    const p = Math.min((now - startTime) / duration, 1);
-    const pos = start + dist * ease(p);
-    window.scrollTo(0, pos);
-    scrollTarget = pos;
-    if (p < 1) requestAnimationFrame(step);
-    else scrollTarget = y;
-  }
-  requestAnimationFrame(step);
-}
-
+// ========== ANCHOR SMOOTH SCROLL ==========
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   anchor.addEventListener('click', function(e) {
     e.preventDefault();
     const target = document.querySelector(this.getAttribute('href'));
-    if (!target) return;
-    const y = target.getBoundingClientRect().top + window.scrollY;
-    smoothScrollTo(y, 750);
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
   });
 });
 

@@ -97,13 +97,13 @@ body {
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.02em;
+  color: var(--yellow);
   background: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 40%, var(--teal) 80%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: titleReveal 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   animation-delay: 0.4s;
-  text-shadow: none;
   filter: drop-shadow(0 0 40px rgba(255,45,122,0.5));
 }
 
