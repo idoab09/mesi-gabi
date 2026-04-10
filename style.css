@@ -97,14 +97,19 @@ body {
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.02em;
+  /* Solid fallback — visible even if background-clip fails */
   color: var(--yellow);
+  animation: titleReveal 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 0.4s;
+  filter: drop-shadow(0 0 40px rgba(255,45,122,0.5));
+}
+
+/* Gradient applied to each letter span — if it fails, h1 color shows through */
+.hero-title .title-letter {
   background: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 40%, var(--teal) 80%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: titleReveal 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  animation-delay: 0.4s;
-  filter: drop-shadow(0 0 40px rgba(255,45,122,0.5));
 }
 
 @keyframes titleReveal {
