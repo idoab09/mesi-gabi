@@ -1198,59 +1198,42 @@ document.addEventListener('click', (e) => {
   }
 
   // ---- VINYL DRAG IMAGE ----
-  // Draw a vinyl record onto a canvas and use it as the drag ghost
   function makeVinylDragImage(accentColor) {
     const size = 120;
     const c = document.createElement('canvas');
     c.width = c.height = size;
     const ctx2 = c.getContext('2d');
     const cx = size / 2, cy = size / 2, r = size / 2 - 1;
-    // Outer disc
-    ctx2.beginPath();
-    ctx2.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx2.fillStyle = '#0a0010';
-    ctx2.fill();
-    // Groove rings
+    ctx2.beginPath(); ctx2.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx2.fillStyle = '#0a0010'; ctx2.fill();
     [0.9, 0.75, 0.6, 0.45].forEach(frac => {
-      ctx2.beginPath();
-      ctx2.arc(cx, cy, r * frac, 0, Math.PI * 2);
-      ctx2.strokeStyle = 'rgba(255,255,255,0.07)';
-      ctx2.lineWidth = 1;
-      ctx2.stroke();
+      ctx2.beginPath(); ctx2.arc(cx, cy, r * frac, 0, Math.PI * 2);
+      ctx2.strokeStyle = 'rgba(255,255,255,0.07)'; ctx2.lineWidth = 1; ctx2.stroke();
     });
-    // Label circle
-    ctx2.beginPath();
-    ctx2.arc(cx, cy, r * 0.28, 0, Math.PI * 2);
-    ctx2.fillStyle = accentColor || '#FF2D7A';
-    ctx2.fill();
-    // Center hole
-    ctx2.beginPath();
-    ctx2.arc(cx, cy, r * 0.05, 0, Math.PI * 2);
-    ctx2.fillStyle = '#000';
-    ctx2.fill();
-    // Outer glow border
-    ctx2.beginPath();
-    ctx2.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx2.strokeStyle = 'rgba(124,58,237,0.6)';
-    ctx2.lineWidth = 2;
-    ctx2.stroke();
-    // Position off-screen so it doesn't flash visible
+    ctx2.beginPath(); ctx2.arc(cx, cy, r * 0.28, 0, Math.PI * 2);
+    ctx2.fillStyle = accentColor || '#FF2D7A'; ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(cx, cy, r * 0.05, 0, Math.PI * 2);
+    ctx2.fillStyle = '#000'; ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx2.strokeStyle = 'rgba(124,58,237,0.6)'; ctx2.lineWidth = 2; ctx2.stroke();
     c.style.cssText = 'position:fixed;top:-200px;left:-200px;pointer-events:none;';
     document.body.appendChild(c);
     return c;
   }
 
-  // ---- DRAG & DROP ----
+  // ---- DRAG & DROP (vinyl handle only) ----
   let draggingCard = null;
 
   albumCards.forEach(card => {
-    card.addEventListener('dragstart', e => {
+    const handle = card.querySelector('.vinyl-drag-handle');
+
+    // Desktop drag
+    handle.addEventListener('dragstart', e => {
       draggingCard = card;
-      setTimeout(() => card.classList.add('dragging'), 0);
+      setTimeout(() => handle.classList.add('dragging'), 0);
       if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'copy';
         e.dataTransfer.setData('text/plain', card.dataset.src);
-        // Use vinyl canvas as drag image, centered under cursor
         const color = LABEL_COLORS[card.dataset.src] || '#FF2D7A';
         const ghost = makeVinylDragImage(color);
         e.dataTransfer.setDragImage(ghost, 60, 60);
@@ -1258,46 +1241,73 @@ document.addEventListener('click', (e) => {
       }
     });
 
-    card.addEventListener('dragend', () => {
-      card.classList.remove('dragging');
+    handle.addEventListener('dragend', () => {
+      handle.classList.remove('dragging');
       platter.classList.remove('drop-target');
       turntableWrap.classList.remove('drop-target');
       draggingCard = null;
     });
 
-    // Touch fallback — simulate drag with a ghost element
+    // Touch drag — long-press to pick up, then drag
     let touchGhost = null;
     let touchStartPos = null;
-    card.addEventListener('touchstart', e => {
+    let touchDragging = false;
+    let longPressTimer = null;
+
+    function cancelLongPress() {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    }
+
+    handle.addEventListener('touchstart', e => {
       const t = e.touches[0];
       touchStartPos = { x: t.clientX, y: t.clientY };
-      draggingCard = card;
+      touchDragging = false;
+      touchGhost = null;
+
+      longPressTimer = setTimeout(() => {
+        longPressTimer = null;
+        // Snap vinyl into the "ready" position and create ghost
+        handle.classList.add('ready-to-drag');
+        draggingCard = card;
+        touchDragging = true;
+        const vSize = handle.offsetWidth; // matches CSS size (115px mobile, 140px desktop)
+        const vHalf = vSize / 2;
+        touchGhost = document.createElement('div');
+        touchGhost.style.cssText = `position:fixed;pointer-events:none;z-index:10001;width:${vSize}px;height:${vSize}px;border-radius:50%;opacity:0.95;transform:rotate(80deg) scale(1.08);transition:none;background:radial-gradient(circle at center,#c026d3 0 13%,#1a0030 13.5% 18%,#2d0050 18.5% 30%,#0f0020 30.5% 45%,#1a0030 45.5% 55%,#0f0020 55.5% 70%,#1a0030 70.5% 80%,#0f0020 80.5% 100%);box-shadow:0 0 40px rgba(192,38,211,0.7),0 4px 24px rgba(0,0,0,0.8);`;
+        touchGhost.style.left = (t.clientX - vHalf) + 'px';
+        touchGhost.style.top  = (t.clientY - vHalf) + 'px';
+        document.body.appendChild(touchGhost);
+        // Quick haptic if available
+        if (navigator.vibrate) navigator.vibrate(30);
+      }, 400);
     }, { passive: true });
 
-    card.addEventListener('touchmove', e => {
-      if (!draggingCard) return;
+    handle.addEventListener('touchmove', e => {
+      if (!touchStartPos) return;
       const t = e.touches[0];
-      // Only start dragging after 10px movement
-      if (!touchGhost) {
+
+      // If finger moved before long-press fires, cancel it
+      if (!touchDragging) {
         const dx = t.clientX - touchStartPos.x;
         const dy = t.clientY - touchStartPos.y;
-        if (Math.hypot(dx, dy) < 10) return;
-        touchGhost = card.cloneNode(true);
-        touchGhost.style.cssText = `position:fixed; pointer-events:none; z-index:10001; width:${card.offsetWidth}px; opacity:0.85; transform:scale(1.05); transition:none;`;
-        document.body.appendChild(touchGhost);
-        card.classList.add('dragging');
+        if (Math.hypot(dx, dy) > 6) cancelLongPress();
+        return;
       }
-      touchGhost.style.left = (t.clientX - card.offsetWidth / 2) + 'px';
-      touchGhost.style.top  = (t.clientY - card.offsetHeight / 2) + 'px';
-      // Check if over platter
+
+      e.preventDefault();
+      const half = touchGhost.offsetWidth / 2;
+      touchGhost.style.left = (t.clientX - half) + 'px';
+      touchGhost.style.top  = (t.clientY - half) + 'px';
       const pr = platter.getBoundingClientRect();
       const over = t.clientX >= pr.left && t.clientX <= pr.right &&
                    t.clientY >= pr.top  && t.clientY <= pr.bottom;
       platter.classList.toggle('drop-target', over);
       turntableWrap.classList.toggle('drop-target', over);
-    }, { passive: true });
+    }, { passive: false });
 
-    card.addEventListener('touchend', e => {
+    handle.addEventListener('touchend', e => {
+      cancelLongPress();
+      handle.classList.remove('ready-to-drag');
       if (touchGhost) {
         const t = e.changedTouches[0];
         const pr = platter.getBoundingClientRect();
@@ -1305,21 +1315,17 @@ document.addEventListener('click', (e) => {
                      t.clientY >= pr.top  && t.clientY <= pr.bottom;
         touchGhost.remove();
         touchGhost = null;
-        card.classList.remove('dragging');
         if (over) dropAlbumOnPlatter(card);
       }
       platter.classList.remove('drop-target');
       turntableWrap.classList.remove('drop-target');
       draggingCard = null;
+      touchStartPos = null;
+      touchDragging = false;
     });
   });
 
-  // Drop zone: the turntable wrap
-  function isValidDropZone(target) {
-    return target === platter || platter.contains(target) ||
-           target === turntableWrap || turntableWrap.contains(target);
-  }
-
+  // Drop zone
   ['dragenter', 'dragover'].forEach(evt => {
     turntableWrap.addEventListener(evt, e => {
       if (!draggingCard) return;
@@ -1331,7 +1337,6 @@ document.addEventListener('click', (e) => {
   });
 
   turntableWrap.addEventListener('dragleave', e => {
-    // Only remove if we're actually leaving the wrap (not moving to a child)
     if (e.relatedTarget && turntableWrap.contains(e.relatedTarget)) return;
     platter.classList.remove('drop-target');
     turntableWrap.classList.remove('drop-target');
@@ -1343,6 +1348,19 @@ document.addEventListener('click', (e) => {
     turntableWrap.classList.remove('drop-target');
     if (draggingCard) dropAlbumOnPlatter(draggingCard);
   });
+
+  // Drop target highlight
+  const dropTargetStyle = document.createElement('style');
+  dropTargetStyle.textContent = `
+    .platter.drop-target {
+      box-shadow: 0 0 0 6px rgba(0,212,200,0.4), 0 0 60px rgba(0,212,200,0.7),
+                  0 0 120px rgba(0,212,200,0.4), inset 0 4px 20px rgba(0,0,0,0.6);
+      transform: scale(1.04);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .turntable-wrap.drop-target { transform: scale(1.02); }
+  `;
+  document.head.appendChild(dropTargetStyle);
 
   // ---- DROP ANIMATION ----
   function dropAlbumOnPlatter(card) {

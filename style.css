@@ -1586,7 +1586,7 @@ body {
   margin: 0 20px;
   width: 160px;
   flex-shrink: 0;
-  cursor: grab;
+  cursor: default;
   user-select: none;
   transition: transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1), filter 0.2s;
   position: relative;
@@ -1595,13 +1595,6 @@ body {
 .album-card:hover {
   transform: translateY(-6px) scale(1.04);
   filter: brightness(1.15);
-}
-
-.album-card:active { cursor: grabbing; }
-
-.album-card.dragging {
-  opacity: 0.35;
-  transform: scale(0.92);
 }
 
 .album-card.now-playing .album-art::after {
@@ -1631,7 +1624,7 @@ body {
   overflow: hidden;
 }
 
-/* Hidden record that slides out from behind the sleeve on hover */
+/* Vinyl disc that slides out from behind the sleeve on hover — draggable */
 .album-card {
   overflow: visible;
 }
@@ -1641,8 +1634,7 @@ body {
   z-index: 2;
 }
 
-.album-card::before {
-  content: '';
+.vinyl-drag-handle {
   position: absolute;
   top: 10px;
   left: 10px;
@@ -1651,21 +1643,37 @@ body {
   border-radius: 50%;
   background:
     radial-gradient(circle at center,
-      #2a0a4a 0 14%,
-      #0a0010 14.5% 48%,
-      #1a0030 48.5% 50%,
-      #0a0010 50% 100%);
-  box-shadow: 0 0 20px rgba(0,0,0,0.7);
+      #c026d3 0 13%,
+      #1a0030 13.5% 18%,
+      #2d0050 18.5% 30%,
+      #0f0020 30.5% 45%,
+      #1a0030 45.5% 55%,
+      #0f0020 55.5% 70%,
+      #1a0030 70.5% 80%,
+      #0f0020 80.5% 100%);
+  box-shadow: 0 0 24px rgba(0,0,0,0.8), inset 0 0 12px rgba(192,38,211,0.15);
   transform: translateX(0) rotate(0deg);
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s, box-shadow 0.25s;
   z-index: 1;
-  pointer-events: none;
-  opacity: 0;
+  opacity: 0.35;
+  cursor: grab;
 }
 
-.album-card:hover::before {
-  opacity: 0.95;
-  transform: translateX(45px) rotate(80deg);
+.album-card:hover .vinyl-drag-handle {
+  opacity: 1;
+  transform: translateX(40px) rotate(80deg);
+  box-shadow: 0 0 32px rgba(192,38,211,0.5), 0 4px 24px rgba(0,0,0,0.8), inset 0 0 16px rgba(192,38,211,0.2);
+}
+
+.vinyl-drag-handle.ready-to-drag {
+  opacity: 1;
+  transform: translateX(40px) rotate(80deg) scale(1.08);
+  box-shadow: 0 0 40px rgba(192,38,211,0.7), 0 4px 24px rgba(0,0,0,0.8);
+  transition: transform 0.2s, opacity 0.2s, box-shadow 0.2s;
+}
+
+.vinyl-drag-handle:active {
+  cursor: grabbing;
 }
 
 .album-meta {
@@ -1689,22 +1697,9 @@ body {
   margin-top: 0.2rem;
 }
 
-/* Drop target highlight */
-.platter.drop-target {
-  box-shadow:
-    0 0 0 6px rgba(0,212,200,0.4),
-    0 0 60px rgba(0,212,200,0.7),
-    0 0 120px rgba(0,212,200,0.4),
-    inset 0 4px 20px rgba(0,0,0,0.6);
-  transform: scale(1.04);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
 .turntable-wrap {
   transition: transform 0.2s;
 }
-
-.turntable-wrap.drop-target { transform: scale(1.02); }
 
 /* Flying vinyl overlay — a full record that animates from the album to the platter */
 #flying-vinyl {
@@ -1784,7 +1779,9 @@ body {
   .tonearm { height: 75px; }
   .album-card { width: 130px; }
   .album-art { width: 130px; height: 130px; }
-  .album-card::before { width: 115px; height: 115px; top: 8px; left: 8px; }
+  .vinyl-drag-handle { width: 115px; height: 115px; top: 8px; left: 8px; }
+  .album-card:hover .vinyl-drag-handle { transform: translateX(32px) rotate(80deg); }
+  .vinyl-drag-handle.ready-to-drag { transform: translateX(32px) rotate(80deg) scale(1.08); }
   .album-title { font-size: 0.75rem; }
   .album-artist { font-size: 0.65rem; }
   #flying-vinyl { width: 150px; height: 150px; }
