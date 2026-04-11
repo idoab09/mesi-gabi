@@ -622,10 +622,11 @@ body {
 .rsvp-success p { font-weight: 700; font-size: 1.1rem; color: var(--lime); }
 
 /* ===== NOTICEBOARD ===== */
-.noticeboard-subtitle {
-  color: rgba(255,255,255,0.4);
-  font-size: 0.82rem;
-  margin: -0.6rem 0 1.2rem;
+.noticeboard-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.4rem;
 }
 
 .noticeboard-empty {

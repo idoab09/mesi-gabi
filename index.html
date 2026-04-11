@@ -380,10 +380,6 @@
     <div class="rsvp-success" id="rsvp-success">
       <span class="success-emoji">🎊</span>
       <p id="rsvp-success-msg">תודה! נתראה במסיבה!</p>
-      <div id="noticeboard-post-wrap" style="display:none;width:100%;margin-top:0.8rem;">
-        <textarea id="noticeboard-input" class="noticeboard-input" placeholder="השאר/י הודעה על לוח המודעות... ✍️" maxlength="200"></textarea>
-        <button class="btn-party" style="width:100%;margin-top:0.5rem;font-size:0.9rem;padding:0.6rem;" onclick="postNoticeboardMessage()">פרסם הודעה 📌</button>
-      </div>
       <button class="btn-start" style="margin-top:0.8rem;width:auto;padding:0.5rem 1.5rem;" onclick="resetRSVP()">הוסף עוד מגיע/ה</button>
     </div>
   </div>
@@ -411,7 +407,11 @@
 <section class="info-section" style="padding-top:0">
   <div class="info-card noticeboard-card">
     <h2>📌 לוח המודעות</h2>
-    <p class="noticeboard-subtitle">רק מגיעים יכולים לפרסם!</p>
+    <div class="noticeboard-form">
+      <input class="rsvp-input" type="text" id="noticeboard-name" placeholder="השם שלך" maxlength="40" autocomplete="off" />
+      <textarea id="noticeboard-input" class="noticeboard-input" placeholder="כתוב/י הודעה... ✍️" maxlength="200"></textarea>
+      <button class="btn-party" style="width:100%;font-size:0.9rem;padding:0.6rem;" onclick="postNoticeboardMessage()">פרסם הודעה 📌</button>
+    </div>
     <div id="noticeboard-list"></div>
   </div>
 </section>

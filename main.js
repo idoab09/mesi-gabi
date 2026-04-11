@@ -531,7 +531,6 @@ function sendRSVP(coming) {
   const success = document.getElementById('rsvp-success');
   success.style.display = 'flex';
   document.getElementById('rsvp-success-msg').textContent = msg;
-  document.getElementById('noticeboard-post-wrap').style.display = coming ? 'block' : 'none';
   if (coming) {
     addGuest(name);
     createConfetti(canvas.width/2, canvas.height/2, 30, true);
@@ -545,7 +544,6 @@ function resetRSVP() {
   document.getElementById('rsvp-name').value = '';
   document.getElementById('rsvp-form').style.display = 'flex';
   document.getElementById('rsvp-success').style.display = 'none';
-  document.getElementById('noticeboard-post-wrap').style.display = 'none';
 }
 
 // ========== NOTICEBOARD ==========
@@ -578,22 +576,34 @@ async function fetchNoticeboard() {
 }
 
 async function postNoticeboardMessage() {
+  const name = document.getElementById('noticeboard-name').value.trim();
   const text = document.getElementById('noticeboard-input').value.trim();
-  if (!text || !rsvpName) return;
-  const btn = document.querySelector('#noticeboard-post-wrap .btn-party');
+  if (!name) {
+    const inp = document.getElementById('noticeboard-name');
+    inp.focus(); inp.classList.add('input-shake');
+    setTimeout(() => inp.classList.remove('input-shake'), 600);
+    return;
+  }
+  if (!text) {
+    const inp = document.getElementById('noticeboard-input');
+    inp.focus(); inp.classList.add('input-shake');
+    setTimeout(() => inp.classList.remove('input-shake'), 600);
+    return;
+  }
+  const btn = document.querySelector('.noticeboard-form .btn-party');
   btn.disabled = true;
   btn.textContent = 'שולח...';
   try {
     const r = await fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: rsvpName, text }),
+      body: JSON.stringify({ name, text }),
     });
     if (r.ok) {
       noticeboardMessages = await r.json();
       renderNoticeboard();
+      document.getElementById('noticeboard-name').value = '';
       document.getElementById('noticeboard-input').value = '';
-      document.getElementById('noticeboard-post-wrap').style.display = 'none';
       showToast('📌 ההודעה פורסמה!');
     }
   } catch { showToast('שגיאת חיבור 😢'); }
