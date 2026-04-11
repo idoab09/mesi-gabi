@@ -1754,7 +1754,7 @@ body {
   100% { transform: translateX(100px) rotate(180deg); opacity: 0; }
 }
 
-.album-card.ejecting::before {
+.album-card.ejecting .vinyl-drag-handle {
   animation: recordSlideOut 0.45s ease-out forwards;
 }
 

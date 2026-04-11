@@ -1309,7 +1309,14 @@ document.addEventListener('click', (e) => {
       const half = touchGhost.offsetWidth / 2;
       touchGhost.style.left = (t.clientX - half) + 'px';
       touchGhost.style.top  = (t.clientY - half) + 'px';
-      const pr = platter.getBoundingClientRect();
+
+      // Auto-scroll the page when dragging near the top edge
+      const edgeThreshold = 120;
+      if (t.clientY < edgeThreshold) {
+        window.scrollBy(0, -Math.round((edgeThreshold - t.clientY) / 4));
+      }
+
+      const pr = turntableWrap.getBoundingClientRect();
       const over = t.clientX >= pr.left && t.clientX <= pr.right &&
                    t.clientY >= pr.top  && t.clientY <= pr.bottom;
       platter.classList.toggle('drop-target', over);
@@ -1319,7 +1326,7 @@ document.addEventListener('click', (e) => {
     handle.addEventListener('touchend', e => {
       const dropped = !!touchGhost;
       const t = e.changedTouches[0];
-      const pr = platter.getBoundingClientRect();
+      const pr = turntableWrap.getBoundingClientRect();
       const over = t.clientX >= pr.left && t.clientX <= pr.right &&
                    t.clientY >= pr.top  && t.clientY <= pr.bottom;
       cleanupTouch();
