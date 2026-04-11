@@ -213,7 +213,7 @@
     <div class="album-card" data-src="assets/celebration.mp3"
          data-cover="assets/celebration.webp"
          data-title="Celebration"
-         data-artist="Kool & The Gang">
+         data-artist="Kool & The Gang"> 
       <div class="vinyl-drag-handle" draggable="true"></div>
       <div class="album-art" style="background-image:url('assets/celebration.webp')"></div>
       <div class="album-meta">
@@ -380,8 +380,21 @@
     <div class="rsvp-success" id="rsvp-success">
       <span class="success-emoji">🎊</span>
       <p id="rsvp-success-msg">תודה! נתראה במסיבה!</p>
+      <div id="noticeboard-post-wrap" style="display:none;width:100%;margin-top:0.8rem;">
+        <textarea id="noticeboard-input" class="noticeboard-input" placeholder="השאר/י הודעה על לוח המודעות... ✍️" maxlength="200"></textarea>
+        <button class="btn-party" style="width:100%;margin-top:0.5rem;font-size:0.9rem;padding:0.6rem;" onclick="postNoticeboardMessage()">פרסם הודעה 📌</button>
+      </div>
       <button class="btn-start" style="margin-top:0.8rem;width:auto;padding:0.5rem 1.5rem;" onclick="resetRSVP()">הוסף עוד מגיע/ה</button>
     </div>
+  </div>
+</section>
+
+<!-- EXCUSE GENERATOR -->
+<section class="info-section" style="padding-top:0">
+  <div class="excuse-box">
+    <span class="excuse-label">לא יכול/ה להגיע? 🤔</span>
+    <button class="btn-excuse" onclick="generateExcuse()">תן לי תירוץ 🎲</button>
+    <p class="excuse-text" id="excuse-text"></p>
   </div>
 </section>
 
@@ -391,6 +404,15 @@
     <h2>🎉 מי מגיע למסיגבי?</h2>
     <div id="guest-count-line" style="color:rgba(255,255,255,0.5);font-size:1rem;margin-bottom:1.2rem;">עדיין אין מגיעים — היה הראשון!</div>
     <div id="guest-list-grid"></div>
+  </div>
+</section>
+
+<!-- NOTICEBOARD -->
+<section class="info-section" style="padding-top:0">
+  <div class="info-card noticeboard-card">
+    <h2>📌 לוח המודעות</h2>
+    <p class="noticeboard-subtitle">רק מגיעים יכולים לפרסם!</p>
+    <div id="noticeboard-list"></div>
   </div>
 </section>
 

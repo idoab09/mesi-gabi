@@ -621,6 +621,126 @@ body {
 .rsvp-success .success-emoji { font-size: 3rem; }
 .rsvp-success p { font-weight: 700; font-size: 1.1rem; color: var(--lime); }
 
+/* ===== NOTICEBOARD ===== */
+.noticeboard-subtitle {
+  color: rgba(255,255,255,0.4);
+  font-size: 0.82rem;
+  margin: -0.6rem 0 1.2rem;
+}
+
+.noticeboard-empty {
+  color: rgba(255,255,255,0.3);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.notice-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.notice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.notice-name {
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: var(--pink);
+}
+
+.notice-date {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.3);
+}
+
+.notice-text {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.noticeboard-input {
+  width: 100%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.7rem 1rem;
+  resize: none;
+  min-height: 80px;
+  box-sizing: border-box;
+  direction: rtl;
+}
+
+.noticeboard-input::placeholder { color: rgba(255,255,255,0.35); }
+.noticeboard-input:focus { outline: none; border-color: var(--pink); }
+
+@keyframes inputShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.input-shake { animation: inputShake 0.5s ease; }
+
+/* ===== EXCUSE GENERATOR ===== */
+.excuse-box {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 0.8rem 1.2rem;
+}
+
+.excuse-label {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.45);
+  flex-shrink: 0;
+}
+
+.btn-excuse {
+  background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(255,45,122,0.2));
+  border: 1px solid rgba(124,58,237,0.4);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-excuse:hover { background: linear-gradient(135deg, rgba(124,58,237,0.5), rgba(255,45,122,0.35)); transform: scale(1.04); }
+.btn-excuse:active { transform: scale(0.97); }
+
+.excuse-text {
+  width: 100%;
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--pink);
+  font-weight: 700;
+  min-height: 0;
+  transition: opacity 0.2s;
+}
+
+.excuse-text:empty { display: none; }
+
 /* ===== LEADERBOARD ===== */
 .leaderboard {
   background: rgba(255,255,255,0.04);
@@ -1275,7 +1395,7 @@ body {
 }
 
 .track-name {
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   font-weight: 900;
   color: #fff;
   white-space: nowrap;
@@ -1284,7 +1404,7 @@ body {
 }
 
 .track-artist {
-  font-size: 0.8rem;
+  font-size: 1rem;
   color: var(--teal);
   font-weight: 700;
   margin-top: 0.2rem;
@@ -1665,13 +1785,6 @@ body {
   box-shadow: 0 0 32px rgba(192,38,211,0.5), 0 4px 24px rgba(0,0,0,0.8), inset 0 0 16px rgba(192,38,211,0.2);
 }
 
-.vinyl-drag-handle.ready-to-drag {
-  opacity: 1;
-  transform: translateX(40px) rotate(80deg) scale(1.08);
-  box-shadow: 0 0 40px rgba(192,38,211,0.7), 0 4px 24px rgba(0,0,0,0.8);
-  transition: transform 0.2s, opacity 0.2s, box-shadow 0.2s;
-}
-
 .vinyl-drag-handle:active {
   cursor: grabbing;
 }
@@ -1781,7 +1894,6 @@ body {
   .album-art { width: 130px; height: 130px; }
   .vinyl-drag-handle { width: 115px; height: 115px; top: 8px; left: 8px; }
   .album-card:hover .vinyl-drag-handle { transform: translateX(32px) rotate(80deg); }
-  .vinyl-drag-handle.ready-to-drag { transform: translateX(32px) rotate(80deg) scale(1.08); }
   .album-title { font-size: 0.75rem; }
   .album-artist { font-size: 0.65rem; }
   #flying-vinyl { width: 150px; height: 150px; }
