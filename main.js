@@ -1258,26 +1258,37 @@ document.addEventListener('click', (e) => {
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
     }
 
+    function cleanupTouch() {
+      cancelLongPress();
+      handle.classList.remove('ready-to-drag');
+      if (touchGhost) { touchGhost.remove(); touchGhost = null; }
+      platter.classList.remove('drop-target');
+      turntableWrap.classList.remove('drop-target');
+      draggingCard = null;
+      touchStartPos = null;
+      touchDragging = false;
+    }
+
     handle.addEventListener('touchstart', e => {
+      cleanupTouch(); // clear any leftover state from a previous interrupted gesture
       const t = e.touches[0];
       touchStartPos = { x: t.clientX, y: t.clientY };
-      touchDragging = false;
-      touchGhost = null;
+      const startX = t.clientX, startY = t.clientY;
 
       longPressTimer = setTimeout(() => {
         longPressTimer = null;
-        // Snap vinyl into the "ready" position and create ghost
+        // Only fire if finger is still touching
+        if (!touchStartPos) return;
         handle.classList.add('ready-to-drag');
         draggingCard = card;
         touchDragging = true;
-        const vSize = handle.offsetWidth; // matches CSS size (115px mobile, 140px desktop)
+        const vSize = handle.offsetWidth;
         const vHalf = vSize / 2;
         touchGhost = document.createElement('div');
         touchGhost.style.cssText = `position:fixed;pointer-events:none;z-index:10001;width:${vSize}px;height:${vSize}px;border-radius:50%;opacity:0.95;transform:rotate(80deg) scale(1.08);transition:none;background:radial-gradient(circle at center,#c026d3 0 13%,#1a0030 13.5% 18%,#2d0050 18.5% 30%,#0f0020 30.5% 45%,#1a0030 45.5% 55%,#0f0020 55.5% 70%,#1a0030 70.5% 80%,#0f0020 80.5% 100%);box-shadow:0 0 40px rgba(192,38,211,0.7),0 4px 24px rgba(0,0,0,0.8);`;
-        touchGhost.style.left = (t.clientX - vHalf) + 'px';
-        touchGhost.style.top  = (t.clientY - vHalf) + 'px';
+        touchGhost.style.left = (startX - vHalf) + 'px';
+        touchGhost.style.top  = (startY - vHalf) + 'px';
         document.body.appendChild(touchGhost);
-        // Quick haptic if available
         if (navigator.vibrate) navigator.vibrate(30);
       }, 400);
     }, { passive: true });
@@ -1306,23 +1317,16 @@ document.addEventListener('click', (e) => {
     }, { passive: false });
 
     handle.addEventListener('touchend', e => {
-      cancelLongPress();
-      handle.classList.remove('ready-to-drag');
-      if (touchGhost) {
-        const t = e.changedTouches[0];
-        const pr = platter.getBoundingClientRect();
-        const over = t.clientX >= pr.left && t.clientX <= pr.right &&
-                     t.clientY >= pr.top  && t.clientY <= pr.bottom;
-        touchGhost.remove();
-        touchGhost = null;
-        if (over) dropAlbumOnPlatter(card);
-      }
-      platter.classList.remove('drop-target');
-      turntableWrap.classList.remove('drop-target');
-      draggingCard = null;
-      touchStartPos = null;
-      touchDragging = false;
+      const dropped = !!touchGhost;
+      const t = e.changedTouches[0];
+      const pr = platter.getBoundingClientRect();
+      const over = t.clientX >= pr.left && t.clientX <= pr.right &&
+                   t.clientY >= pr.top  && t.clientY <= pr.bottom;
+      cleanupTouch();
+      if (dropped && over) dropAlbumOnPlatter(card);
     });
+
+    handle.addEventListener('touchcancel', cleanupTouch);
   });
 
   // Drop zone
