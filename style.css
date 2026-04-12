@@ -760,13 +760,95 @@ body {
 
 .lb-entry {
   display: flex;
-  justify-content: space-between;
-  padding: 0.3rem 0.5rem;
-  font-size: 0.9rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.88rem;
   border-radius: 8px;
 }
 
 .lb-entry:nth-child(even) { background: rgba(255,255,255,0.03); }
+
+.lb-rank { font-size: 1.1rem; min-width: 1.8rem; }
+.lb-name { flex: 1; font-weight: 700; color: rgba(255,255,255,0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-score { color: var(--yellow); font-weight: 700; font-size: 0.85rem; white-space: nowrap; }
+
+/* Public leaderboard collapsible */
+.public-leaderboard {
+  margin-top: 0.8rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 0.6rem;
+}
+
+.lb-toggle {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  color: var(--yellow);
+  font-size: 0.82rem;
+  font-family: inherit;
+  font-weight: 700;
+  padding: 0.3rem 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  width: 100%;
+}
+.lb-toggle:hover { background: rgba(255,214,0,0.1); border-color: var(--yellow); }
+
+.lb-panel {
+  margin-top: 0.6rem;
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+}
+
+.lb-entries-list { min-height: 1.5rem; }
+
+.lb-empty {
+  color: rgba(255,255,255,0.35);
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 0.4rem 0;
+}
+
+/* Submit form inside leaderboard */
+.lb-submit {
+  display: none;
+  flex-direction: row;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+  align-items: center;
+}
+
+.lb-name-input {
+  flex: 1;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.7rem;
+  outline: none;
+  min-width: 0;
+}
+.lb-name-input:focus { border-color: var(--yellow); }
+.lb-name-input::placeholder { color: rgba(255,255,255,0.3); }
+
+.lb-submit-btn {
+  background: var(--yellow);
+  color: #111;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.1s, opacity 0.2s;
+}
+.lb-submit-btn:hover { transform: scale(1.04); opacity: 0.9; }
 
 /* ===== FOOTER ===== */
 .party-footer {

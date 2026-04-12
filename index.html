@@ -290,20 +290,36 @@
         <div id="duck-game-duck" class="inactive">🦆</div>
       </div>
       <button class="btn-start" id="duck-start-btn" onclick="startDuckGame()">התחל משחק! 🎮</button>
-      <div class="leaderboard" id="duck-leaderboard" style="display:none">
-        <div class="lb-title">🏆 שיאים אישיים</div>
-        <div id="duck-lb-entries"></div>
+      <div class="public-leaderboard" id="duck-pub-lb">
+        <button class="lb-toggle" onclick="toggleLeaderboard('duck')">🏆 לוח שיאים ▾</button>
+        <div class="lb-panel" id="duck-lb-panel" style="display:none">
+          <div id="duck-lb-entries" class="lb-entries-list"></div>
+          <div class="lb-submit" id="duck-lb-submit" style="display:none">
+            <input class="lb-name-input" id="duck-lb-name" type="text" placeholder="השם שלך" maxlength="20" />
+            <button class="lb-submit-btn" onclick="submitScore('duck')">שמור ניקוד 🏆</button>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- BALLOON POP GAME -->
     <div class="game-card">
       <div class="game-title">🎈 פוצץ בלונים!</div>
-      <div class="game-desc">פוצץ כמה שיותר בלונים ב-15 שניות!</div>
+      <div class="game-desc">פוצץ כמה שיותר בלונים ב-15 שניות! אל תיגע בפצצות 💣!</div>
       <div class="score-display" id="balloon-score">0</div>
       <div class="timer-bar-wrapper"><div class="timer-bar" id="balloon-timer-bar"></div></div>
       <div id="balloon-arena"></div>
       <button class="btn-start" id="balloon-start-btn" onclick="startBalloonGame()">התחל משחק! 🎮</button>
+      <div class="public-leaderboard" id="balloon-pub-lb">
+        <button class="lb-toggle" onclick="toggleLeaderboard('balloon')">🏆 לוח שיאים ▾</button>
+        <div class="lb-panel" id="balloon-lb-panel" style="display:none">
+          <div id="balloon-lb-entries" class="lb-entries-list"></div>
+          <div class="lb-submit" id="balloon-lb-submit" style="display:none">
+            <input class="lb-name-input" id="balloon-lb-name" type="text" placeholder="השם שלך" maxlength="20" />
+            <button class="lb-submit-btn" onclick="submitScore('balloon')">שמור ניקוד 🏆</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- CONFETTI CANNON -->
@@ -324,6 +340,16 @@
       <div class="score-display" id="memory-score">0</div>
       <div id="memory-grid"></div>
       <button class="btn-start" id="memory-start-btn" onclick="startMemoryGame()">התחל משחק! 🧠</button>
+      <div class="public-leaderboard" id="memory-pub-lb">
+        <button class="lb-toggle" onclick="toggleLeaderboard('memory')">🏆 לוח שיאים ▾</button>
+        <div class="lb-panel" id="memory-lb-panel" style="display:none">
+          <div id="memory-lb-entries" class="lb-entries-list"></div>
+          <div class="lb-submit" id="memory-lb-submit" style="display:none">
+            <input class="lb-name-input" id="memory-lb-name" type="text" placeholder="השם שלך" maxlength="20" />
+            <button class="lb-submit-btn" onclick="submitScore('memory')">שמור ניקוד 🏆</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- WHACK-A-DUCK GAME -->
@@ -334,6 +360,16 @@
       <div class="timer-bar-wrapper"><div class="timer-bar" id="whack-timer-bar"></div></div>
       <div id="whack-grid"></div>
       <button class="btn-start" id="whack-start-btn" onclick="startWhackGame()">התחל משחק! 🔨</button>
+      <div class="public-leaderboard" id="whack-pub-lb">
+        <button class="lb-toggle" onclick="toggleLeaderboard('whack')">🏆 לוח שיאים ▾</button>
+        <div class="lb-panel" id="whack-lb-panel" style="display:none">
+          <div id="whack-lb-entries" class="lb-entries-list"></div>
+          <div class="lb-submit" id="whack-lb-submit" style="display:none">
+            <input class="lb-name-input" id="whack-lb-name" type="text" placeholder="השם שלך" maxlength="20" />
+            <button class="lb-submit-btn" onclick="submitScore('whack')">שמור ניקוד 🏆</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- SIMON SAYS -->
@@ -349,6 +385,16 @@
         <div class="simon-btn" id="s3" data-i="3" onclick="simonPress(3)">🦩</div>
       </div>
       <button class="btn-start" id="simon-start-btn" onclick="startSimon()" style="margin-top:1rem;">התחל משחק! 🎵</button>
+      <div class="public-leaderboard" id="simon-pub-lb">
+        <button class="lb-toggle" onclick="toggleLeaderboard('simon')">🏆 לוח שיאים ▾</button>
+        <div class="lb-panel" id="simon-lb-panel" style="display:none">
+          <div id="simon-lb-entries" class="lb-entries-list"></div>
+          <div class="lb-submit" id="simon-lb-submit" style="display:none">
+            <input class="lb-name-input" id="simon-lb-name" type="text" placeholder="השם שלך" maxlength="20" />
+            <button class="lb-submit-btn" onclick="submitScore('simon')">שמור ניקוד 🏆</button>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>

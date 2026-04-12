@@ -203,6 +203,7 @@ let duckActive = false;
 let duckScore = 0;
 let duckTimerInterval, duckMoveInterval;
 let duckTimeLeft = 15;
+let duckLastScore = 0;
 
 const duckArena = document.getElementById('duck-arena');
 const duckEl = document.getElementById('duck-game-duck');
@@ -231,7 +232,8 @@ function startDuckGame() {
   duckBtn.textContent = '⏳ שחק!';
   duckEl.classList.remove('inactive');
   moveDuck();
-  duckMoveInterval = setInterval(moveDuck, 1200);
+  // 30% harder: move every 840ms instead of 1200ms
+  duckMoveInterval = setInterval(moveDuck, 840);
   duckTimerInterval = setInterval(() => {
     duckTimeLeft -= 0.1;
     duckTimerBar.style.width = (duckTimeLeft / 15 * 100) + '%';
@@ -247,9 +249,11 @@ function endDuckGame() {
   duckBtn.disabled = false;
   duckBtn.textContent = 'שחק שוב! 🦆';
   duckTimerBar.style.width = '0%';
-  saveDuckScore(duckScore);
+  duckLastScore = duckScore;
   showToast('המשחק נגמר! קלטת ' + duckScore + ' ברווזים! 🦆');
   if (duckScore >= 5) createConfetti(canvas.width/2, canvas.height/2, 20, true);
+  showLbSubmit('duck', duckScore);
+  fetchLeaderboard('duck');
 }
 
 duckEl.addEventListener('click', onDuckClick);
@@ -280,19 +284,6 @@ function showHitText(x, y) {
   setTimeout(() => ht.remove(), 800);
 }
 
-let duckHighScores = [];
-function saveDuckScore(score) {
-  duckHighScores.push(score);
-  duckHighScores.sort((a,b) => b-a);
-  duckHighScores = duckHighScores.slice(0,3);
-  const lb = document.getElementById('duck-leaderboard');
-  lb.style.display = 'block';
-  const entries = document.getElementById('duck-lb-entries');
-  entries.innerHTML = duckHighScores.map((s,i) =>
-    `<div class="lb-entry"><span>${['🥇','🥈','🥉'][i]} מקום ${i+1}</span><span>${s} ברווזים</span></div>`
-  ).join('');
-}
-
 // ========== BALLOON POP GAME ==========
 const balloonArena = document.getElementById('balloon-arena');
 const balloonScoreEl = document.getElementById('balloon-score');
@@ -303,7 +294,9 @@ let balloonActive = false;
 let balloonScore = 0;
 let balloonTimeLeft = 15;
 let balloonInterval, balloonTimerInterval2;
-const balloonTypes = ['🎈','🎈','🎈','🟠','🟡','🟣','🔵'];
+let balloonLastScore = 0;
+// More balloon types including "bombs" (💣) that you should NOT pop — penalizes misclicks
+const balloonTypes = ['🎈','🎈','🎈','🎈','🟠','🟡','🟣','🔵','💣','💣'];
 
 function startBalloonGame() {
   if (balloonActive) return;
@@ -316,7 +309,8 @@ function startBalloonGame() {
   balloonBtn.textContent = '⏳ פוצץ!';
   balloonArena.innerHTML = '';
 
-  balloonInterval = setInterval(spawnPopBalloon, 600);
+  // 30% harder: spawn every 420ms instead of 600ms
+  balloonInterval = setInterval(spawnPopBalloon, 420);
   balloonTimerInterval2 = setInterval(() => {
     balloonTimeLeft -= 0.1;
     balloonTimerBarEl.style.width = (balloonTimeLeft / 15 * 100) + '%';
@@ -332,21 +326,29 @@ function endBalloonGame() {
   balloonBtn.disabled = false;
   balloonBtn.textContent = 'שחק שוב! 🎈';
   balloonTimerBarEl.style.width = '0%';
+  balloonLastScore = balloonScore;
   showToast('פוצצת ' + balloonScore + ' בלונים! 🎈');
   if (balloonScore >= 10) createConfetti(canvas.width/2, canvas.height/2, 25, true);
+  showLbSubmit('balloon', balloonScore);
+  fetchLeaderboard('balloon');
 }
 
 function spawnPopBalloon() {
   if (!balloonActive) return;
+  // Limit balloons on screen to keep it challenging (can't just click a pile)
+  if (balloonArena.querySelectorAll('.pop-balloon').length >= 6) return;
   const b = document.createElement('div');
   b.className = 'pop-balloon';
-  b.textContent = balloonTypes[Math.floor(Math.random() * balloonTypes.length)];
+  const type = balloonTypes[Math.floor(Math.random() * balloonTypes.length)];
+  b.textContent = type;
+  b.dataset.bomb = type === '💣' ? '1' : '0';
   const arenaH = balloonArena.clientHeight;
   const arenaW = balloonArena.clientWidth;
   const maxX = arenaW - 50;
   b.style.left = Math.random() * maxX + 'px';
   b.style.top = (arenaH - 10) + 'px';
-  const dur = Math.random() * 1.5 + 2;
+  // 30% harder: shorter float time (1.1–2.0s instead of 2.0–3.5s)
+  const dur = Math.random() * 0.9 + 1.1;
   b.style.animationDuration = dur + 's';
 
   let popped = false;
@@ -355,6 +357,18 @@ function spawnPopBalloon() {
     popped = true;
     e.preventDefault();
     e.stopPropagation();
+    if (b.dataset.bomb === '1') {
+      // Hit a bomb — lose a point
+      balloonScore = Math.max(0, balloonScore - 1);
+      balloonScoreEl.textContent = balloonScore;
+      b.textContent = '💥';
+      b.style.animation = 'none';
+      b.style.opacity = '0';
+      b.style.transition = 'opacity 0.2s';
+      showToast('💣 בום! פוצצת פצצה! -1');
+      setTimeout(() => b.remove(), 250);
+      return;
+    }
     balloonScore++;
     balloonScoreEl.textContent = balloonScore;
     b.textContent = '💥';
@@ -616,6 +630,7 @@ fetchNoticeboard();
 // ========== MEMORY GAME ==========
 const MEMORY_EMOJIS = ['🦆','🦜','🐸','🦩','🐧','🦁','🐼','🐙'];
 let memFlipped = [], memMatched = 0, memLocked = false, memScore = 0;
+let memLastScore = 0;
 
 function startMemoryGame() {
   const grid = document.getElementById('memory-grid');
@@ -654,18 +669,22 @@ function flipCard(card) {
       memFlipped = [];
       memLocked = false;
       if (memMatched === MEMORY_EMOJIS.length) {
+        memLastScore = memScore;
         createConfetti(canvas.width/2, canvas.height/3, 25, true);
         showToast('🏆 מצאת את כל הזוגות! ' + memScore + ' נקודות!');
+        showLbSubmit('memory', memScore);
+        fetchLeaderboard('memory');
       }
     } else {
+      // 30% harder: flip back after 630ms instead of 900ms, penalty -2 instead of -1
       setTimeout(() => {
         a.classList.remove('flipped');
         b.classList.remove('flipped');
         memFlipped = [];
         memLocked = false;
-        memScore = Math.max(0, memScore - 1);
+        memScore = Math.max(0, memScore - 2);
         document.getElementById('memory-score').textContent = memScore;
-      }, 900);
+      }, 630);
     }
   }
 }
@@ -718,11 +737,12 @@ function startWhackGame() {
 
   whackHoles.forEach(h => { h.el.classList.remove('up','hit'); h.up = false; clearTimeout(h.timer); });
 
-  let spawnDelay = 700;
+  // 30% harder: start at 490ms instead of 700ms, floor at 210ms instead of 300ms
+  let spawnDelay = 490;
   function spawnLoop() {
     if (!whackActive) return;
     popRandomDuck();
-    spawnDelay = Math.max(300, spawnDelay - 10);
+    spawnDelay = Math.max(210, spawnDelay - 8);
     whackSpawnInt = setTimeout(spawnLoop, spawnDelay);
   }
   spawnLoop();
@@ -743,10 +763,11 @@ function popRandomDuck() {
   h.el.classList.remove('hit');
   h.el.classList.add('up');
   h.up = true;
+  // 30% harder: visible for 420–840ms instead of 600–1400ms
   h.timer = setTimeout(() => {
     h.el.classList.remove('up');
     h.up = false;
-  }, Math.random() * 800 + 600);
+  }, Math.random() * 420 + 420);
 }
 
 function whackHit(holeEl, idx) {
@@ -775,6 +796,8 @@ function endWhackGame() {
   btn.textContent = 'שחק שוב! 🔨';
   showToast('סיימת עם ' + whackScore + ' מכות! 🔨');
   if (whackScore >= 15) createConfetti(canvas.width/2, canvas.height/2, 25, true);
+  showLbSubmit('whack', whackScore);
+  fetchLeaderboard('whack');
 }
 
 // ========== SIMON SAYS ==========
@@ -829,13 +852,16 @@ function setSimonBtnsDisabled(disabled) {
 async function playSequence() {
   setSimonBtnsDisabled(true);
   document.getElementById('simon-status').textContent = '👀 צפה ברצף...';
-  await sleep(600);
+  // 30% harder: shorter initial pause and faster light flashes
+  const onDur = Math.max(180, 350 - simonLevel * 10);
+  const offDur = Math.max(100, 140 - simonLevel * 5);
+  await sleep(400);
   for (const idx of simonSeq) {
     simonLightBtn(idx, true);
-    playTone(SIMON_FREQS[idx]);
-    await sleep(500);
+    playTone(SIMON_FREQS[idx], onDur / 1000);
+    await sleep(onDur);
     simonLightBtn(idx, false);
-    await sleep(200);
+    await sleep(offDur);
   }
   setSimonBtnsDisabled(false);
   simonPlayerIdx = 0;
@@ -883,6 +909,8 @@ async function simonPress(i) {
     document.getElementById('simon-level').textContent = 'נסה שוב!';
     setSimonBtnsDisabled(true);
     if (simonLevel >= 5) createConfetti(canvas.width/2, canvas.height/2, 15, true);
+    showLbSubmit('simon', simonLevel);
+    fetchLeaderboard('simon');
     return;
   }
 
@@ -893,6 +921,99 @@ async function simonPress(i) {
     await sleep(900);
     nextSimonRound();
   }
+}
+
+// ========== PUBLIC LEADERBOARDS ==========
+const LB_LABELS = {
+  duck: 'ברווזים',
+  balloon: 'בלונים',
+  memory: 'נקודות',
+  whack: 'מכות',
+  simon: 'שלב',
+};
+
+function toggleLeaderboard(game) {
+  const panel = document.getElementById(game + '-lb-panel');
+  const btn = document.querySelector(`#${game}-pub-lb .lb-toggle`);
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    btn.textContent = '🏆 לוח שיאים ▴';
+    fetchLeaderboard(game);
+  } else {
+    panel.style.display = 'none';
+    btn.textContent = '🏆 לוח שיאים ▾';
+  }
+}
+
+async function fetchLeaderboard(game) {
+  const el = document.getElementById(game + '-lb-entries');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/leaderboard?game=' + game);
+    if (!r.ok) return;
+    const entries = await r.json();
+    renderLeaderboard(game, entries);
+  } catch {}
+}
+
+function renderLeaderboard(game, entries) {
+  const el = document.getElementById(game + '-lb-entries');
+  if (!el) return;
+  const medals = ['🥇','🥈','🥉'];
+  const label = LB_LABELS[game] || '';
+  if (entries.length === 0) {
+    el.innerHTML = '<div class="lb-empty">אין שיאנים עדיין — היה/י הראשון/ה!</div>';
+    return;
+  }
+  el.innerHTML = entries.map((e, i) =>
+    `<div class="lb-entry">
+      <span class="lb-rank">${medals[i] || (i + 1) + '.'}</span>
+      <span class="lb-name">${escapeHtml(e.name)}</span>
+      <span class="lb-score">${e.score} ${label}</span>
+    </div>`
+  ).join('');
+}
+
+function showLbSubmit(game, score) {
+  const el = document.getElementById(game + '-lb-submit');
+  if (!el) return;
+  el.style.display = 'flex';
+  el.dataset.score = score;
+  // Open the panel automatically so the user sees the submit form
+  const panel = document.getElementById(game + '-lb-panel');
+  const btn = document.querySelector(`#${game}-pub-lb .lb-toggle`);
+  if (panel && panel.style.display === 'none') {
+    panel.style.display = 'block';
+    if (btn) btn.textContent = '🏆 לוח שיאים ▴';
+  }
+}
+
+async function submitScore(game) {
+  const nameEl = document.getElementById(game + '-lb-name');
+  const submitEl = document.getElementById(game + '-lb-submit');
+  const name = nameEl.value.trim();
+  if (!name) {
+    nameEl.focus();
+    nameEl.classList.add('input-shake');
+    setTimeout(() => nameEl.classList.remove('input-shake'), 600);
+    return;
+  }
+  const score = parseInt(submitEl.dataset.score, 10);
+  if (isNaN(score)) return;
+  try {
+    const r = await fetch('/api/leaderboard?game=' + game, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, score }),
+    });
+    if (r.ok) {
+      const entries = await r.json();
+      renderLeaderboard(game, entries);
+      submitEl.style.display = 'none';
+      nameEl.value = '';
+      showToast('🏆 הניקוד נשמר!');
+    }
+  } catch { showToast('שגיאת חיבור 😢'); }
 }
 
 // ========== CLICK ANYWHERE SPARKLE ==========
