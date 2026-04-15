@@ -923,6 +923,166 @@ async function simonPress(i) {
   }
 }
 
+// ========== TRIVIA GAME ==========
+const TRIVIA_QUESTIONS = [
+  { q: 'איזו להקה שרה "Get Lucky"?', opts: ['Daft Punk', 'Stardust', 'Modjo', 'Justice'], a: 0 },
+  { q: 'מה שם השיר שמתחיל ב-"Do you remember..."?', opts: ['September', 'October', 'December', 'November'], a: 0 },
+  { q: 'מה קוד הלבוש למסיגבי?', opts: ['חליפת ערב', 'גי של קארטה', 'שמלת ים', 'פיג\'מה'], a: 1 },
+  { q: 'איפה מתקיימת המסיגבי?', opts: ['מיורקה', 'קפריסין', 'סנטוריני', 'מלטה'], a: 2 },
+  { q: 'מה החיה האייקונית של המסיגבי?', opts: ['🐧 פינגווין', '🦆 ברווז', '🦜 תוכי', '🐸 צפרדע'], a: 1 },
+  { q: 'באיזו שעה מתחילה המסיבה?', opts: ['20:00', '22:00', '19:00', '21:00'], a: 3 },
+  { q: 'מה השם המלא של האתר?', opts: ['גביפארטי', 'מסיגבי', 'המסיבה של גבי', 'נייט גבי'], a: 1 },
+  { q: 'כמה חיות יש בפרד החיות של האתר?', opts: ['6', '7', '8', '9'], a: 2 },
+  { q: 'באיזה תאריך מתקיימת המסיגבי?', opts: ['3 באוגוסט', '14 ביולי', '7 באוגוסט', '21 ביוני'], a: 2 },
+  { q: 'כמה חתולים יש לגבי ומאור?', opts: ['1', '2', '3', '4'], a: 2 },
+  { q: 'איזה חגורה יש לגבי בקארטה?', opts: ['חומה', 'כחולה', 'שחורה', 'ירוקה'], a: 2 },
+  { q: 'האם גבי אוכל בשר?', opts: ['לא', 'כן', 'רק עוף', 'רק בימים זוגיים'], a: 0 },
+  { q: 'איפה גבי עובד?', opts: ['גוגל', 'מיקרוסופט', 'אפל', 'אמזון'], a: 2 },
+  { q: 'מה היה השם המקורי של גבי?', opts: ['גבריאל אלחנדרו', 'פטריסיו חבייר', 'חואן קרלוס', 'דייגו מראדונה'], a: 1 },
+  { q: 'מאיזו מדינה גבי עלה?', opts: ['ברזיל', 'ספרד', 'צ\'ילה', 'ארגנטינה'], a: 3 },
+  { q: 'איך קוראים לבן של גבי?', opts: ['תום', 'רום', 'עומרי', 'גיא'], a: 1 },
+  { q: 'באיזה צבע הגיטרה החשמלית של גבי?', opts: ['שחור ולבן', 'אדום', 'כחול מטאלי', 'ירוק וזהב'], a: 3 },
+  { q: 'כמה ילדים יש לגבי?', opts: ['1', '2', '3', '4'], a: 1 },
+  { q: 'איך קוראים לחברה של גבי?', opts: ['מיכל', 'שיר', 'מאור', 'יעל'], a: 2 },
+  { q: 'באיזו עיר נמצא הדוג\'ו שגבי מלמד בו?', opts: ['תל אביב', 'רמת גן', 'גבעתיים', 'הרצליה'], a: 2 }
+];
+
+const TRIVIA_COUNT = 8;
+const TRIVIA_TIME = 12;
+
+let triviaActive = false;
+let triviaPool = [];
+let triviaIdx = 0;
+let triviaScore = 0;
+let triviaTimerInterval = null;
+let triviaTimeLeft = TRIVIA_TIME;
+let triviaAnswered = false;
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startTrivia() {
+  triviaActive = true;
+  triviaScore = 0;
+  triviaIdx = 0;
+  triviaPool = shuffleArray(TRIVIA_QUESTIONS).slice(0, TRIVIA_COUNT);
+
+  document.getElementById('trivia-score').textContent = '0';
+  document.getElementById('trivia-status').style.display = 'none';
+  document.getElementById('trivia-result-wrap').style.display = 'none';
+  document.getElementById('trivia-question-wrap').style.display = 'block';
+  document.getElementById('trivia-start-btn').style.display = 'none';
+  showTriviaQuestion();
+}
+
+function showTriviaQuestion() {
+  if (triviaIdx >= triviaPool.length) { endTrivia(); return; }
+
+  const q = triviaPool[triviaIdx];
+  triviaAnswered = false;
+
+  document.getElementById('trivia-q-num').textContent = `שאלה ${triviaIdx + 1}/${triviaPool.length}`;
+  document.getElementById('trivia-question').textContent = q.q;
+
+  const optsEl = document.getElementById('trivia-options');
+  optsEl.innerHTML = q.opts.map((opt, i) =>
+    `<button class="trivia-opt" onclick="answerTrivia(${i})">${opt}</button>`
+  ).join('');
+
+  // Animate question in
+  const qEl = document.getElementById('trivia-question');
+  qEl.classList.remove('trivia-q-in');
+  void qEl.offsetWidth;
+  qEl.classList.add('trivia-q-in');
+
+  triviaTimeLeft = TRIVIA_TIME;
+  document.getElementById('trivia-timer-bar').style.width = '100%';
+  document.getElementById('trivia-time-left').textContent = TRIVIA_TIME + 's';
+  clearInterval(triviaTimerInterval);
+  triviaTimerInterval = setInterval(() => {
+    triviaTimeLeft -= 0.1;
+    document.getElementById('trivia-timer-bar').style.width = (triviaTimeLeft / TRIVIA_TIME * 100) + '%';
+    document.getElementById('trivia-time-left').textContent = Math.ceil(triviaTimeLeft) + 's';
+    if (triviaTimeLeft <= 0) {
+      clearInterval(triviaTimerInterval);
+      if (!triviaAnswered) timeoutTrivia();
+    }
+  }, 100);
+}
+
+function answerTrivia(chosen) {
+  if (triviaAnswered) return;
+  triviaAnswered = true;
+  clearInterval(triviaTimerInterval);
+
+  const q = triviaPool[triviaIdx];
+  const opts = document.querySelectorAll('.trivia-opt');
+  const correct = chosen === q.a;
+
+  opts.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.a) btn.classList.add('trivia-opt-correct');
+    else if (i === chosen) btn.classList.add('trivia-opt-wrong');
+  });
+
+  if (correct) {
+    const timeBonus = Math.floor(triviaTimeLeft / 2);
+    const points = 5 + timeBonus;
+    triviaScore += points;
+    document.getElementById('trivia-score').textContent = triviaScore;
+    showToast(`✅ נכון! +${points} נקודות`);
+    createConfetti(canvas.width / 2, canvas.height / 2, 10, true);
+  } else {
+    showToast('❌ טעות! התשובה: ' + q.opts[q.a]);
+  }
+
+  setTimeout(() => { triviaIdx++; showTriviaQuestion(); }, 1200);
+}
+
+function timeoutTrivia() {
+  if (triviaAnswered) return;
+  triviaAnswered = true;
+  const q = triviaPool[triviaIdx];
+  const opts = document.querySelectorAll('.trivia-opt');
+  opts.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.a) btn.classList.add('trivia-opt-correct');
+  });
+  showToast('⏰ נגמר הזמן! +0');
+  setTimeout(() => { triviaIdx++; showTriviaQuestion(); }, 1200);
+}
+
+function endTrivia() {
+  triviaActive = false;
+  clearInterval(triviaTimerInterval);
+  document.getElementById('trivia-question-wrap').style.display = 'none';
+
+  const maxScore = TRIVIA_COUNT * (5 + Math.floor(TRIVIA_TIME / 2));
+  const pct = triviaScore / maxScore;
+  let emoji, text;
+  if (pct >= 0.8)      { emoji = '🏆'; text = `${triviaScore} נקודות — גאון מסיגבי!`; }
+  else if (pct >= 0.55) { emoji = '🎉'; text = `${triviaScore} נקודות — מרשים מאוד!`; }
+  else if (pct >= 0.35) { emoji = '👍'; text = `${triviaScore} נקודות — לא רע בכלל!`; }
+  else                  { emoji = '🦆'; text = `${triviaScore} נקודות — בא/י לתרגל עם הברווזים`; }
+
+  document.getElementById('trivia-result-emoji').textContent = emoji;
+  document.getElementById('trivia-result-text').textContent = text;
+  document.getElementById('trivia-result-wrap').style.display = 'block';
+
+  const btn = document.getElementById('trivia-start-btn');
+  btn.style.display = '';
+  btn.textContent = 'שחק שוב! 🧠';
+
+  showLbSubmit('trivia', triviaScore);
+  fetchLeaderboard('trivia');
+}
+
 // ========== PUBLIC LEADERBOARDS ==========
 const LB_LABELS = {
   duck: 'ברווזים',
@@ -930,6 +1090,7 @@ const LB_LABELS = {
   memory: 'נקודות',
   whack: 'מכות',
   simon: 'שלב',
+  trivia: 'נקודות',
 };
 
 function toggleLeaderboard(game) {
@@ -1605,6 +1766,749 @@ setTimeout(() => {
   crate.scrollTo({ left: 140, behavior: 'smooth' });
   setTimeout(() => crate.scrollTo({ left: 0, behavior: 'smooth' }), 700);
 }, 1500);
+
+// ========== INVITE CARD GENERATOR ==========
+
+const CG_PERSONALITIES = {
+  gabi: {
+    name: 'גבי',
+    title: 'הטרול החכם של אפל 🍎',
+    desc: 'אתה/י חכם/ה, מצחיק/ה, קצת טרול/ית — ועובד/ת באפל.',
+    colors: ['#1d1d1f', '#0071e3', '#f5f5f7'],
+    accent: '#0071e3',
+    bg: 'linear-gradient(135deg, #1d1d1f 0%, #0a0a0a 60%, #001a33 100%)',
+    border: '#0071e3',
+    quotes: [
+      '"אם זה לא על אייפון, אני לא מגיע"',
+      '"גם סירי לא מבינה אותי"',
+      '"באגים? אני קורא לזה פיצ\'רים"',
+      '"כן, יש לי מק. לא, אני לא אסביר כמה הוא עלה"',
+      '"אני לא טרול, אני סתם צודק"',
+      'תזכיר לי באיזה צבע החגורה שלך בקארטה?',
+    ],
+  },
+  rom: {
+    name: 'רום',
+    title: 'הגאון הישן ב-11 😴',
+    desc: 'חכם יחסית, ציונים? פחות. בנות? עוד פחות. שינה? הרבה.',
+    colors: ['#0d0020', '#7C3AED', '#FFD600'],
+    accent: '#7C3AED',
+    bg: 'linear-gradient(135deg, #0d0020 0%, #1a003a 60%, #2a0060 100%)',
+    border: '#7C3AED',
+    quotes: [
+      '"אני יכול לעשות את זה מחר"',
+      '"הציון לא מייצג את האינטליגנציה שלי"',
+      '"אני לא ישן, אני טוען אנרגיה"',
+      '"יש לי GF — Grand Future"',
+      '"טכנית לא נכשלתי, פשוט לא הצלחתי"',
+    ],
+  },
+  party_animal: {
+    name: 'חיית המסיבה',
+    title: 'המלך/ה של הרחבה 🦆',
+    desc: 'אתה/י הראשון/ה להגיע והאחרון/ה לעזוב. כל השירים שלך.',
+    colors: ['#0D0020', '#FF2D7A', '#FFD600'],
+    accent: '#FF2D7A',
+    bg: 'linear-gradient(135deg, #0D0020 0%, #2a0035 50%, #1a000f 100%)',
+    border: '#FF2D7A',
+    quotes: [
+      '"השיר הזה הוא עלי"',
+      '"הברווז הזה מייצג אותי בנפש"',
+      '"DJ תעלה את הווליום"',
+      '"אני לא עייף/ה, המסיבה עייפה"',
+      '"הגעתי ראשון/ה כי אני הכי מתרגש/ת"',
+    ],
+  },
+  philosopher: {
+    name: 'הפילוסוף/ית',
+    title: 'חושב/ת יותר מדי 🧠',
+    desc: 'שואל/ת שאלות עמוקות תוך כדי ריקוד. מגיע/ה רק כי "מעניין סוציולוגית".',
+    colors: ['#0a1a0a', '#00D4C8', '#A3FF00'],
+    accent: '#00D4C8',
+    bg: 'linear-gradient(135deg, #0a1a1a 0%, #001a1a 60%, #0a2020 100%)',
+    border: '#00D4C8',
+    quotes: [
+      '"מה זה בכלל מסיבה, אם חושבים על זה?"',
+      '"הקצב הזה מזכיר לי ניטשה"',
+      '"אני כאן רק כדי להתבונן"',
+      '"הקונפטי הזה — מטאפורה לחיים"',
+      '"טוב, אבל למה ברווז ספציפית?"',
+    ],
+  },
+  vip: {
+    name: 'ה-VIP',
+    title: 'בא/ה רק לצילום 📸',
+    desc: 'מגיע/ה מאוחר, יוצא/ת מוקדם, נראה/ית מושלם/ת כל הזמן.',
+    colors: ['#1a1000', '#FFD600', '#FF6B00'],
+    accent: '#FFD600',
+    bg: 'linear-gradient(135deg, #1a1000 0%, #2a1a00 60%, #1a0a00 100%)',
+    border: '#FFD600',
+    quotes: [
+      '"אני לא מגיע/ה, אני מופיע/ה"',
+      '"כן, הוזמנתי. לא, לא אסביר איך"',
+      '"הצלם עדיין כאן?"',
+      '"זה הצד הטוב שלי"',
+      '"כולם יזכרו את הכניסה שלי"',
+    ],
+  },
+};
+
+const CG_QUIZ = [
+  {
+    q: 'שישי בלילה — איפה אתה/י?',
+    opts: [
+      { text: 'ישן/ה. ברור.', scores: { rom: 3 } },
+      { text: 'מסיבה כמובן', scores: { party_animal: 3 } },
+      { text: 'כותב/ת קוד', scores: { gabi: 3 } },
+      { text: 'קורא/ת ומהרהר/ת', scores: { philosopher: 2, vip: 1 } },
+    ],
+  },
+  {
+    q: 'מישהו שאל אותך שאלה טיפשה. מה עושה?',
+    opts: [
+      { text: 'עונה בציניות מלאה', scores: { gabi: 3 } },
+      { text: 'מסביר/ה בסבלנות', scores: { philosopher: 2 } },
+      { text: 'ממשיך/ה לרקוד', scores: { party_animal: 2 } },
+      { text: 'מתעלם/ת כי עייף/ה', scores: { rom: 3 } },
+    ],
+  },
+  {
+    q: 'מה הסיכוי שתגיע/י בזמן למסיבה?',
+    opts: [
+      { text: 'אני מגיע/ה ראשון/ה', scores: { party_animal: 3 } },
+      { text: 'כשיהיה רצון', scores: { rom: 2, philosopher: 1 } },
+      { text: 'בדיוק בשעה — אפל מדויקת', scores: { gabi: 3 } },
+      { text: 'מאוחר — זה ה-entrance שלי', scores: { vip: 3 } },
+    ],
+  },
+  {
+    q: 'מה הפלייליסט האידיאלי?',
+    opts: [
+      { text: 'כל מה שיש בספוטיפיי של גבי', scores: { gabi: 2, party_animal: 1 } },
+      { text: 'לא אכפת לי, אני ישן/ה בכל מקרה', scores: { rom: 3 } },
+      { text: 'September על ריפיט', scores: { party_animal: 3 } },
+      { text: 'מוזיקה שמעוררת מחשבה', scores: { philosopher: 3 } },
+    ],
+  },
+  {
+    q: 'מה כתוב על החולצה שלך?',
+    opts: [
+      { text: 'Apple 🍎', scores: { gabi: 3 } },
+      { text: 'ZZZ 💤', scores: { rom: 3 } },
+      { text: '🦆 DUCK MODE', scores: { party_animal: 3 } },
+      { text: 'שאלה פילוסופית ב-7 מילים', scores: { philosopher: 2, vip: 1 } },
+    ],
+  },
+];
+
+const CG_FRAMES = [
+  { id: 'neon', label: 'ניאון', draw: (ctx, w, h, accent) => {
+    ctx.save();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 8;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 18;
+    ctx.strokeRect(10, 10, w - 20, h - 20);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(18, 18, w - 36, h - 36);
+    ctx.restore();
+  }},
+  { id: 'party', label: 'מסיבה', draw: (ctx, w, h, accent) => {
+    ctx.save();
+    const dots = ['🎊','🎉','⭐','🦆','🎈','✨'];
+    ctx.font = '22px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const count = 18;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const rx = w / 2 + Math.cos(angle) * (w / 2 - 22);
+      const ry = h / 2 + Math.sin(angle) * (h / 2 - 22);
+      ctx.fillText(dots[i % dots.length], rx, ry);
+    }
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 4;
+    ctx.setLineDash([8, 6]);
+    ctx.strokeRect(30, 30, w - 60, h - 60);
+    ctx.setLineDash([]);
+    ctx.restore();
+  }},
+  { id: 'minimal', label: 'מינימל', draw: (ctx, w, h, accent) => {
+    ctx.save();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    const s = 18;
+    // Corner brackets
+    [
+      [s, s, 40, 0, 0, 40],
+      [w - s, s, -40, 0, 0, 40],
+      [s, h - s, 40, 0, 0, -40],
+      [w - s, h - s, -40, 0, 0, -40],
+    ].forEach(([x, y, dx1, dy1, dx2, dy2]) => {
+      ctx.beginPath();
+      ctx.moveTo(x + dx1, y); ctx.lineTo(x, y); ctx.lineTo(x, y + dy2);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }},
+  { id: 'glitch', label: 'גליץ\'', draw: (ctx, w, h, accent) => {
+    ctx.save();
+    const offsets = [-3, 3, -2, 2];
+    const colors = [accent, '#FF2D7A', '#00D4C8', '#FFD600'];
+    offsets.forEach((off, i) => {
+      ctx.strokeStyle = colors[i];
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.55;
+      ctx.strokeRect(10 + off, 10, w - 20, h - 20);
+    });
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10, 10, w - 20, h - 20);
+    ctx.restore();
+  }},
+  { id: 'karate', label: 'קארטה', draw: (ctx, w, h, accent) => {
+    ctx.save();
+    // Outer border
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(8, 8, w - 16, h - 16);
+    // Inner thin white
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(16, 16, w - 32, h - 32);
+    // Corner circles
+    [[16,16],[w-16,16],[16,h-16],[w-16,h-16]].forEach(([cx,cy]) => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      ctx.fillStyle = accent;
+      ctx.fill();
+    });
+    ctx.restore();
+  }},
+];
+
+const CG_EMOJIS = ['🦆','🍎','😴','🧠','👑','🔥','⭐','🎉','🥋','🦁','🐸','💎','🌊','⚡','🎭'];
+
+// State
+let cgPhotoDataUrl = null;
+let cgPersonalityKey = null;
+let cgSelectedFrame = 'neon';
+let cgSelectedEmoji = '🦆';
+let cgSelectedQuote = null;
+let cgCurrentStep = 1;
+let cgStream = null;
+let cgQuizAnswers = {};   // { questionIdx: optIdx }
+let cgQuizStep = 0;
+
+function cgStep(n) {
+  document.getElementById(`cg-step-${cgCurrentStep}`).style.display = 'none';
+  cgCurrentStep = n;
+  document.getElementById(`cg-step-${n}`).style.display = 'block';
+  document.getElementById(`cg-step-${n}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (n === 2) cgRenderQuiz();
+  if (n === 3) cgRenderCustomize();
+}
+
+// ---- CAMERA ----
+async function cgOpenCamera() {
+  try {
+    cgStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    const video = document.getElementById('cg-video');
+    video.srcObject = cgStream;
+    video.style.display = 'block';
+    document.getElementById('cg-camera-overlay').style.display = 'none';
+    document.getElementById('cg-camera-controls').style.display = 'flex';
+    document.getElementById('cg-preview').style.display = 'none';
+  } catch {
+    showToast('לא ניתן לגשת למצלמה 😢');
+    cgUploadInstead();
+  }
+}
+
+function cgSnap() {
+  const video = document.getElementById('cg-video');
+  const snapCanvas = document.getElementById('cg-snap-canvas');
+  snapCanvas.width = video.videoWidth || 400;
+  snapCanvas.height = video.videoHeight || 300;
+  snapCanvas.getContext('2d').drawImage(video, 0, 0);
+  cgPhotoDataUrl = snapCanvas.toDataURL('image/jpeg', 0.9);
+  cgShowPreview();
+}
+
+function cgRetake() {
+  cgPhotoDataUrl = null;
+  const preview = document.getElementById('cg-preview');
+  preview.style.display = 'none';
+  document.getElementById('cg-photo-controls').style.display = 'none';
+  if (cgStream) {
+    document.getElementById('cg-video').style.display = 'block';
+    document.getElementById('cg-camera-controls').style.display = 'flex';
+  } else {
+    document.getElementById('cg-camera-overlay').style.display = 'flex';
+    document.getElementById('cg-camera-controls').style.display = 'none';
+  }
+}
+
+function cgShowPreview() {
+  if (cgStream) {
+    cgStream.getTracks().forEach(t => t.stop());
+    cgStream = null;
+  }
+  const video = document.getElementById('cg-video');
+  video.style.display = 'none';
+  const preview = document.getElementById('cg-preview');
+  preview.src = cgPhotoDataUrl;
+  preview.style.display = 'block';
+  document.getElementById('cg-camera-controls').style.display = 'none';
+  document.getElementById('cg-photo-controls').style.display = 'flex';
+  document.getElementById('cg-camera-overlay').style.display = 'none';
+}
+
+function cgUploadInstead() {
+  document.getElementById('cg-file-input').click();
+}
+
+function cgFileChosen(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    cgPhotoDataUrl = ev.target.result;
+    cgShowPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---- QUIZ ----
+function cgRenderQuiz() {
+  cgQuizAnswers = {};
+  cgQuizStep = 0;
+  const wrap = document.getElementById('cg-quiz-wrap');
+  wrap.innerHTML = '';
+  cgShowQuizQuestion(wrap);
+}
+
+function cgShowQuizQuestion(wrap) {
+  if (cgQuizStep >= CG_QUIZ.length) { cgComputePersonality(); return; }
+  const q = CG_QUIZ[cgQuizStep];
+  const total = CG_QUIZ.length;
+
+  wrap.innerHTML = `
+    <div class="cg-quiz-progress">
+      <div class="cg-quiz-bar" style="width:${(cgQuizStep / total) * 100}%"></div>
+    </div>
+    <div class="cg-quiz-counter">${cgQuizStep + 1} / ${total}</div>
+    <div class="cg-quiz-q">${q.q}</div>
+    <div class="cg-quiz-opts">
+      ${q.opts.map((o, i) => `<button class="cg-quiz-opt" onclick="cgAnswer(${i})">${o.text}</button>`).join('')}
+    </div>
+  `;
+  // Animate in
+  wrap.querySelector('.cg-quiz-q').classList.add('trivia-q-in');
+}
+
+function cgAnswer(optIdx) {
+  cgQuizAnswers[cgQuizStep] = optIdx;
+  cgQuizStep++;
+  cgShowQuizQuestion(document.getElementById('cg-quiz-wrap'));
+}
+
+function cgComputePersonality() {
+  const totals = {};
+  Object.keys(CG_PERSONALITIES).forEach(k => totals[k] = 0);
+  CG_QUIZ.forEach((q, qi) => {
+    const chosen = cgQuizAnswers[qi];
+    if (chosen === undefined) return;
+    const scores = q.opts[chosen].scores || {};
+    Object.entries(scores).forEach(([k, v]) => { totals[k] = (totals[k] || 0) + v; });
+  });
+  cgPersonalityKey = Object.entries(totals).sort((a, b) => b[1] - a[1])[0][0];
+  cgStep(3);
+}
+
+// ---- CUSTOMIZE + CANVAS ----
+function cgRenderCustomize() {
+  const p = CG_PERSONALITIES[cgPersonalityKey];
+
+  // Show personality result
+  document.getElementById('cg-result-personality').innerHTML = `
+    <div class="cg-personality-badge" style="border-color:${p.border};box-shadow:0 0 20px ${p.border}44">
+      <div class="cg-personality-name">${p.name}</div>
+      <div class="cg-personality-title">${p.title}</div>
+      <div class="cg-personality-desc">${p.desc}</div>
+    </div>
+  `;
+
+  // Default selections
+  cgSelectedFrame = CG_FRAMES[0].id;
+  cgSelectedEmoji = cgPersonalityKey === 'gabi' ? '🍎' : cgPersonalityKey === 'rom' ? '😴' : '🦆';
+  cgSelectedQuote = p.quotes[0];
+
+  // Frame picker
+  const fp = document.getElementById('cg-frame-picker');
+  fp.innerHTML = CG_FRAMES.map(f =>
+    `<button class="cg-frame-btn ${f.id === cgSelectedFrame ? 'selected' : ''}" data-id="${f.id}" onclick="cgSelectFrame('${f.id}')">${f.label}</button>`
+  ).join('');
+
+  // Emoji picker
+  const ep = document.getElementById('cg-emoji-picker');
+  ep.innerHTML = CG_EMOJIS.map(e =>
+    `<button class="cg-emoji-btn ${e === cgSelectedEmoji ? 'selected' : ''}" onclick="cgSelectEmoji('${e}')">${e}</button>`
+  ).join('');
+
+  // Quote picker
+  const qp = document.getElementById('cg-quote-picker');
+  qp.innerHTML = p.quotes.map((q, i) =>
+    `<button class="cg-quote-btn ${i === 0 ? 'selected' : ''}" data-quote="${q.replace(/"/g,'&quot;')}">${q}</button>`
+  ).join('');
+  qp.querySelectorAll('.cg-quote-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cgSelectedQuote = btn.dataset.quote;
+      qp.querySelectorAll('.cg-quote-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      cgDrawCard();
+    });
+  });
+
+  // Name input live preview
+  document.getElementById('cg-name-input').value = '';
+  document.getElementById('cg-name-input').oninput = () => cgDrawCard();
+
+  cgDrawCard();
+}
+
+function cgSelectFrame(id) {
+  cgSelectedFrame = id;
+  document.querySelectorAll('.cg-frame-btn').forEach(b => b.classList.toggle('selected', b.dataset.id === id));
+  cgDrawCard();
+}
+
+function cgSelectEmoji(e) {
+  cgSelectedEmoji = e;
+  document.querySelectorAll('.cg-emoji-btn').forEach(b => b.classList.toggle('selected', b.textContent === e));
+  cgDrawCard();
+}
+
+
+function cgDrawCard() {
+  const cardCanvas = document.getElementById('cg-card-canvas');
+  const ctx = cardCanvas.getContext('2d');
+  const w = cardCanvas.width;
+  const h = cardCanvas.height;
+  const p = CG_PERSONALITIES[cgPersonalityKey];
+  const frame = CG_FRAMES.find(f => f.id === cgSelectedFrame);
+  const name = document.getElementById('cg-name-input').value.trim() || 'השם שלך';
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Background gradient
+  const grad = ctx.createLinearGradient(0, 0, w, h);
+  const stops = p.bg.match(/#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)/g) || ['#0d0020', '#1a003a'];
+  stops.forEach((c, i) => grad.addColorStop(i / Math.max(stops.length - 1, 1), c));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  // Subtle dot grid texture
+  ctx.fillStyle = 'rgba(255,255,255,0.025)';
+  for (let x = 20; x < w; x += 30) {
+    for (let y = 20; y < h; y += 30) {
+      ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Photo (left side)
+  const photoX = 36, photoY = 60, photoW = 180, photoH = 180;
+  if (cgPhotoDataUrl) {
+    const img = new Image();
+    img.onload = () => {
+      // Clipped circle
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(photoX + photoW / 2, photoY + photoH / 2, photoW / 2, 0, Math.PI * 2);
+      ctx.clip();
+      // Cover-fit the image
+      const aspect = img.width / img.height;
+      let sx = 0, sy = 0, sw = img.width, sh = img.height;
+      if (aspect > 1) { sw = img.height; sx = (img.width - sw) / 2; }
+      else { sh = img.width; sy = (img.height - sh) / 2; }
+      ctx.drawImage(img, sx, sy, sw, sh, photoX, photoY, photoW, photoH);
+      ctx.restore();
+
+      // Circle border
+      ctx.beginPath();
+      ctx.arc(photoX + photoW / 2, photoY + photoH / 2, photoW / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 4;
+      ctx.shadowColor = p.accent;
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      cgDrawCardText(ctx, w, h, p, name, photoX, photoY, photoW, photoH, frame);
+    };
+    img.src = cgPhotoDataUrl;
+  } else {
+    // Placeholder circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(photoX + photoW / 2, photoY + photoH / 2, photoW / 2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    ctx.fill();
+    ctx.strokeStyle = p.accent;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+    ctx.font = '64px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('📷', photoX + photoW / 2, photoY + photoH / 2);
+    cgDrawCardText(ctx, w, h, p, name, photoX, photoY, photoW, photoH, frame);
+  }
+}
+
+function cgDrawCardText(ctx, w, h, p, name, photoX, photoY, photoW, photoH, frame) {
+  const textX = photoX + photoW + 28;
+  const textW = w - textX - 32;
+
+  // Party label top-right
+  ctx.font = 'bold 11px Heebo, Arial';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('מסיגבי 2026 🦆', w - 28, 20);
+
+  // Emoji badge
+  ctx.font = '44px serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(cgSelectedEmoji, textX, photoY);
+
+  // Name
+  ctx.font = 'bold 32px Heebo, Arial Hebrew, Arial';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(name, textX, photoY + 52);
+
+  // Personality title
+  ctx.font = 'bold 14px Heebo, Arial Hebrew, Arial';
+  ctx.fillStyle = p.accent;
+  ctx.fillText(p.title, textX, photoY + 92);
+
+  // Personality name tag
+  ctx.save();
+  const tagW = Math.min(textW, 160);
+  const tagH = 26;
+  const tagX = textX;
+  const tagY = photoY + 118;
+  ctx.fillStyle = p.accent + '33';
+  ctx.strokeStyle = p.accent;
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, tagX, tagY, tagW, tagH, 6);
+  ctx.fill(); ctx.stroke();
+  ctx.font = 'bold 12px Heebo, Arial Hebrew, Arial';
+  ctx.fillStyle = p.accent;
+  ctx.textAlign = 'center';
+  ctx.fillText(p.name, tagX + tagW / 2, tagY + 7);
+  ctx.restore();
+
+  // Divider line
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(photoX, photoY + photoH + 24);
+  ctx.lineTo(w - 32, photoY + photoH + 24);
+  ctx.stroke();
+
+  // Quote — word-wrap
+  const quote = cgSelectedQuote || '';
+  ctx.font = 'italic 15px Heebo, Arial Hebrew, Arial';
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const quoteLines = cgWrapText(ctx, quote, w - 80, 230);
+  quoteLines.forEach((line, i) => {
+    ctx.fillText(line, w / 2, photoY + photoH + 38 + i * 22);
+  });
+
+  // Bottom bar
+  ctx.fillStyle = p.accent + '22';
+  ctx.fillRect(0, h - 36, w, 36);
+  ctx.font = 'bold 12px Heebo, Arial Hebrew, Arial';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('7.8.2026 • סנטוריני, יוון • 21:00', w / 2, h - 18);
+
+  // Frame on top
+  if (frame) frame.draw(ctx, w, h, p.accent);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function cgWrapText(ctx, text, maxWidth, _startX) {
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function cgDownload() {
+  cgDrawCard();
+  setTimeout(() => {
+    const canvas = document.getElementById('cg-card-canvas');
+    const link = document.createElement('a');
+    link.download = 'masigabi-card.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('🎉 הכרטיס הורד!');
+    createConfetti(window.innerWidth / 2, window.innerHeight / 2, 30, true);
+  }, 100);
+}
+
+function cgReset() {
+  if (cgStream) { cgStream.getTracks().forEach(t => t.stop()); cgStream = null; }
+  cgPhotoDataUrl = null;
+  cgPersonalityKey = null;
+  cgSelectedFrame = 'neon';
+  cgSelectedEmoji = '🦆';
+  cgSelectedQuote = null;
+  cgQuizAnswers = {};
+  cgQuizStep = 0;
+  cgCurrentStep = 1;
+
+  // Reset UI
+  const video = document.getElementById('cg-video');
+  video.style.display = 'none';
+  video.srcObject = null;
+  document.getElementById('cg-preview').style.display = 'none';
+  document.getElementById('cg-camera-overlay').style.display = 'flex';
+  document.getElementById('cg-camera-controls').style.display = 'none';
+  document.getElementById('cg-photo-controls').style.display = 'none';
+
+  [2, 3].forEach(n => document.getElementById(`cg-step-${n}`).style.display = 'none');
+  document.getElementById('cg-step-1').style.display = 'block';
+  document.getElementById('cg-step-1').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ========== OUTFIT GENERATOR ==========
+const OUTFIT_TOPS = [
+  { emoji: '🥋', label: 'גי לבן קלאסי' },
+  { emoji: '🥷', label: 'גי שחור של נינג\'ה' },
+  { emoji: '👕', label: 'חולצת קארטה ורודה נצנצים' },
+  { emoji: '🎽', label: 'גי עם פאצ\'ים זוהרים' },
+  { emoji: '🌈', label: 'גי ססגוני בצבעי הקשת' },
+  { emoji: '⭐', label: 'גי זהב VIP' },
+  { emoji: '🌙', label: 'גי כסוף לילה' },
+  { emoji: '🔥', label: 'גי עם להבות' },
+];
+
+const OUTFIT_BELTS = [
+  { emoji: '🟡', label: 'חגורה צהובה — מתחיל מסגנון' },
+  { emoji: '🟠', label: 'חגורה כתומה — חמאס של ריקוד' },
+  { emoji: '🔵', label: 'חגורה כחולה — מסטר וייבס' },
+  { emoji: '🟤', label: 'חגורה חומה — ספיישל אדמה' },
+  { emoji: '⚫', label: 'חגורה שחורה — דן 10 של מסיבות' },
+  { emoji: '🔴', label: 'חגורה אדומה — בוס הרצפה' },
+  { emoji: '💜', label: 'חגורה סגולה — קינג ויולט' },
+  { emoji: '✨', label: 'חגורה בלינג — גראן מאסטר' },
+];
+
+const OUTFIT_SHOES = [
+  { emoji: '👟', label: 'נעלי ספורט זוהרות' },
+  { emoji: '🥿', label: 'נעלי מסיבה שטוחות' },
+  { emoji: '👠', label: 'עקבים עם קארטה-וייב' },
+  { emoji: '🩴', label: 'כפכפים עם ניצוץ' },
+  { emoji: '👢', label: 'מגפיים של לוחם' },
+  { emoji: '🪖', label: 'בוטס קרבי — ריקוד וקרב' },
+];
+
+const OUTFIT_ACCESSORIES = [
+  { emoji: '🥷', label: 'מסכת נינג\'ה (חצי)' },
+  { emoji: '🕶️', label: 'משקפי שמש בלוגר' },
+  { emoji: '🎭', label: 'מסכת פנסייה יצירתית' },
+  { emoji: '🎩', label: 'כובע טופ-האט — כי למה לא' },
+  { emoji: '👑', label: 'כתר — אתה המלך/ה הלילה' },
+  { emoji: '🎀', label: 'קשת שיער ענקית' },
+  { emoji: '📿', label: 'שרשרת ג\'ייד' },
+  { emoji: '🌸', label: 'פרחים בשיער — קשה רך' },
+];
+
+const OUTFIT_VIBES = [
+  { emoji: '🐉', text: 'וייב: דרקון מדיטרני — מסוכן אבל רומנטי' },
+  { emoji: '🌊', text: 'וייב: לוחם האוקיינוס — קול אבל קטלני' },
+  { emoji: '🌅', text: 'וייב: שועל המדבר — חם כמו הלילה' },
+  { emoji: '⚡', text: 'וייב: ברק ביפן — מהיר ובלתי נשכח' },
+  { emoji: '🌙', text: 'וייב: שומר הלילה — מסתורי ואלגנטי' },
+  { emoji: '🔥', text: 'וייב: אש ורוח — לא אפשר לעמוד בפני' },
+  { emoji: '💎', text: 'וייב: אבן יקרה — נדיר, יקר, מושלם' },
+  { emoji: '🦋', text: 'וייב: פרפר קארטה — עדין ועוצמתי' },
+  { emoji: '🏆', text: 'וייב: אלוף עולם — פשוט כי כן' },
+  { emoji: '🎆', text: 'וייב: זיקוקי חופשיות — יפה מכדי להסביר' },
+];
+
+function generateOutfit() {
+  const top   = OUTFIT_TOPS[Math.floor(Math.random() * OUTFIT_TOPS.length)];
+  const belt  = OUTFIT_BELTS[Math.floor(Math.random() * OUTFIT_BELTS.length)];
+  const shoes = OUTFIT_SHOES[Math.floor(Math.random() * OUTFIT_SHOES.length)];
+  const acc   = OUTFIT_ACCESSORIES[Math.floor(Math.random() * OUTFIT_ACCESSORIES.length)];
+  const vibe  = OUTFIT_VIBES[Math.floor(Math.random() * OUTFIT_VIBES.length)];
+
+  const result = document.getElementById('outfit-result');
+  const grid   = document.getElementById('outfit-grid');
+  const vibeEl = document.getElementById('outfit-vibe');
+
+  grid.innerHTML = [
+    { icon: top.emoji, cat: 'חליפה', desc: top.label },
+    { icon: belt.emoji, cat: 'חגורה', desc: belt.label },
+    { icon: shoes.emoji, cat: 'נעליים', desc: shoes.label },
+    { icon: acc.emoji, cat: 'אקססוריז', desc: acc.label },
+  ].map((p, i) =>
+    `<div class="outfit-piece" style="animation-delay:${i * 0.09}s">
+      <div class="outfit-piece-emoji">${p.icon}</div>
+      <div class="outfit-piece-category">${p.cat}</div>
+      <div class="outfit-piece-name">${p.desc}</div>
+    </div>`
+  ).join('');
+
+  vibeEl.innerHTML = `<span class="outfit-vibe-emoji">${vibe.emoji}</span> ${vibe.text}`;
+
+  result.style.display = 'block';
+  // Reset animation
+  grid.querySelectorAll('.outfit-piece').forEach(el => {
+    el.classList.remove('outfit-pop');
+    void el.offsetWidth;
+    el.classList.add('outfit-pop');
+  });
+
+  createConfetti(canvas.width / 2, canvas.height / 2, 15, true);
+  showToast('✨ לוק מנצח! בוא/י ככה למסיגבי!');
+}
 
 // ========== EXCUSE GENERATOR ==========
 const EXCUSES = [

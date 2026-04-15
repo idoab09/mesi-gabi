@@ -2,7 +2,7 @@ const BIN_ID = '69d75c89aaba882197dc5ee2';
 const MASTER_KEY = '$2a$10$v2j06aVyWZMNAkxaPsNA7uligf2reBc/zHjnH0ULm6hshQJNs8GZ2';
 const BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-const VALID_GAMES = ['duck', 'balloon', 'memory', 'whack', 'simon'];
+const VALID_GAMES = ['duck', 'balloon', 'memory', 'whack', 'simon', 'trivia'];
 const MAX_ENTRIES = 10;
 
 async function readBin() {

@@ -402,6 +402,119 @@
 
 <div class="section-divider"><span><i></i><i></i><i></i></span></div>
 
+<!-- TRIVIA -->
+<section class="trivia-section">
+  <h2 class="section-title" style="text-align:center;">🧠 טריוויה מסיגבי 🧠</h2>
+  <p style="text-align:center;color:rgba(255,255,255,0.45);font-size:0.9rem;margin-top:-1rem;margin-bottom:2rem;">כמה אתה/י מכיר/ה את גבי?</p>
+  <div class="trivia-card">
+    <div class="trivia-top-row">
+      <div class="score-display" id="trivia-score" style="font-size:2rem;">0</div>
+      <div id="trivia-status" class="trivia-status">לחץ "התחל" כדי לשחק</div>
+    </div>
+    <div id="trivia-question-wrap" style="display:none">
+      <div class="trivia-progress-row">
+        <span id="trivia-q-num" class="trivia-q-num"></span>
+        <div class="timer-bar-wrapper" style="flex:1;margin:0"><div class="timer-bar" id="trivia-timer-bar"></div></div>
+        <span id="trivia-time-left" class="trivia-time-left"></span>
+      </div>
+      <div class="trivia-question" id="trivia-question"></div>
+      <div class="trivia-options" id="trivia-options"></div>
+    </div>
+    <div id="trivia-result-wrap" style="display:none">
+      <div class="trivia-result-emoji" id="trivia-result-emoji"></div>
+      <div class="trivia-result-text" id="trivia-result-text"></div>
+    </div>
+    <button class="btn-start" id="trivia-start-btn" onclick="startTrivia()" style="margin-top:1rem;">התחל משחק! 🧠</button>
+    <div class="public-leaderboard" id="trivia-pub-lb">
+      <button class="lb-toggle" onclick="toggleLeaderboard('trivia')">🏆 לוח שיאים ▾</button>
+      <div class="lb-panel" id="trivia-lb-panel" style="display:none">
+        <div id="trivia-lb-entries" class="lb-entries-list"></div>
+        <div class="lb-submit" id="trivia-lb-submit" style="display:none">
+          <input class="lb-name-input" id="trivia-lb-name" type="text" placeholder="השם שלך" maxlength="20" />
+          <button class="lb-submit-btn" onclick="submitScore('trivia')">שמור ניקוד 🏆</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
+<!-- INVITE CARD GENERATOR -->
+<section class="card-gen-section">
+  <h2 class="section-title" style="text-align:center;">🪪 כרטיס הזמנה אישי 🪪</h2>
+  <p class="card-gen-subtitle">ענה/י על 5 שאלות, גלה/י את האישיות שלך — וצור/י כרטיס הזמנה להוריד!</p>
+
+  <!-- STEP 1: SELFIE -->
+  <div class="card-gen-step" id="cg-step-1">
+    <div class="cg-step-label">שלב 1 מתוך 3 — תמונה</div>
+    <h3 class="cg-step-title">📸 צלם/י סלפי!</h3>
+    <div class="cg-camera-wrap">
+      <video id="cg-video" autoplay playsinline muted></video>
+      <canvas id="cg-snap-canvas" style="display:none"></canvas>
+      <img id="cg-preview" style="display:none" alt="preview" />
+      <div class="cg-camera-overlay" id="cg-camera-overlay">
+        <button class="btn-party cg-btn-camera" id="cg-btn-open-camera" onclick="cgOpenCamera()">📷 פתח מצלמה</button>
+      </div>
+    </div>
+    <div class="cg-camera-controls" id="cg-camera-controls" style="display:none">
+      <button class="btn-start cg-snap-btn" onclick="cgSnap()">📸 צלם!</button>
+      <button class="btn-no cg-btn-small" onclick="cgRetake()">🔄 מחדש</button>
+    </div>
+    <div class="cg-photo-controls" id="cg-photo-controls" style="display:none">
+      <button class="btn-yes" onclick="cgStep(2)">המשך ←</button>
+      <button class="btn-no cg-btn-small" onclick="cgRetake()">🔄 צלם שוב</button>
+    </div>
+    <p class="cg-hint">אין מצלמה? <button class="cg-link-btn" onclick="cgUploadInstead()">העלה תמונה</button></p>
+    <input type="file" id="cg-file-input" accept="image/*" style="display:none" onchange="cgFileChosen(event)" />
+  </div>
+
+  <!-- STEP 2: QUIZ -->
+  <div class="card-gen-step" id="cg-step-2" style="display:none">
+    <div class="cg-step-label">שלב 2 מתוך 3 — אישיות</div>
+    <h3 class="cg-step-title">🧬 מה האישיות שלך?</h3>
+    <div class="cg-quiz-wrap" id="cg-quiz-wrap"></div>
+  </div>
+
+  <!-- STEP 3: CUSTOMIZE + DOWNLOAD -->
+  <div class="card-gen-step" id="cg-step-3" style="display:none">
+    <div class="cg-step-label">שלב 3 מתוך 3 — עיצוב</div>
+    <h3 class="cg-step-title">🎨 עצב/י את הכרטיס!</h3>
+
+    <div class="cg-result-personality" id="cg-result-personality"></div>
+
+    <div class="cg-customize-row">
+      <div class="cg-customize-group">
+        <div class="cg-customize-label">מסגרת</div>
+        <div class="cg-frame-picker" id="cg-frame-picker"></div>
+      </div>
+      <div class="cg-customize-group">
+        <div class="cg-customize-label">אמוג'י</div>
+        <div class="cg-emoji-picker" id="cg-emoji-picker"></div>
+      </div>
+    </div>
+
+    <div class="cg-customize-group" style="margin-top:1rem">
+      <div class="cg-customize-label">ציטוט</div>
+      <div class="cg-quote-picker" id="cg-quote-picker"></div>
+    </div>
+
+    <div class="cg-name-row">
+      <input class="rsvp-input" id="cg-name-input" type="text" placeholder="השם שלך על הכרטיס" maxlength="20" />
+    </div>
+
+    <!-- LIVE CARD PREVIEW -->
+    <div class="cg-preview-wrap">
+      <canvas id="cg-card-canvas" width="600" height="400"></canvas>
+    </div>
+
+    <button class="btn-party cg-download-btn" onclick="cgDownload()">⬇️ הורד כרטיס!</button>
+    <button class="btn-no cg-btn-small" style="margin-top:0.5rem;width:100%" onclick="cgReset()">🔄 התחל מחדש</button>
+  </div>
+</section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
 <!-- INFO + RSVP -->
 <section class="info-section" id="rsvp">
   <div class="info-card">
@@ -427,6 +540,20 @@
       <span class="success-emoji">🎊</span>
       <p id="rsvp-success-msg">תודה! נתראה במסיבה!</p>
       <button class="btn-start" style="margin-top:0.8rem;width:auto;padding:0.5rem 1.5rem;" onclick="resetRSVP()">הוסף עוד מגיע/ה</button>
+    </div>
+  </div>
+</section>
+
+<!-- OUTFIT GENERATOR -->
+<section class="info-section" style="padding-top:0">
+  <div class="info-card outfit-card">
+    <h2>👗 מה ללבוש למסיגבי? 👘</h2>
+    <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:1.5rem;">קוד לבוש: גי של קארטה — אבל בסטייל שלך!</p>
+    <button class="btn-outfit-gen" id="outfit-gen-btn" onclick="generateOutfit()">✨ תן לי לוק! ✨</button>
+    <div class="outfit-result" id="outfit-result" style="display:none">
+      <div class="outfit-grid" id="outfit-grid"></div>
+      <div class="outfit-vibe" id="outfit-vibe"></div>
+      <button class="btn-outfit-gen" style="margin-top:1rem;font-size:0.9rem;padding:0.6rem 1.8rem;" onclick="generateOutfit()">🎲 לוק אחר!</button>
     </div>
   </div>
 </section>

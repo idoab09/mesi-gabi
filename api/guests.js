@@ -2,19 +2,19 @@ const BIN_ID = '69d75c89aaba882197dc5ee2';
 const MASTER_KEY = '$2a$10$v2j06aVyWZMNAkxaPsNA7uligf2reBc/zHjnH0ULm6hshQJNs8GZ2';
 const BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-async function readGuests() {
+async function readBin() {
   const res = await fetch(BASE + '/latest', {
     headers: { 'X-Master-Key': MASTER_KEY },
   });
   const data = await res.json();
-  return data.record?.guests || [];
+  return data.record || {};
 }
 
-async function writeGuests(guests) {
+async function writeGuests(record, guests) {
   await fetch(BASE, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
-    body: JSON.stringify({ guests }),
+    body: JSON.stringify({ ...record, guests }),
   });
 }
 
@@ -27,8 +27,11 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
+    const record = await readBin();
+    const guests = record.guests || [];
+
     if (req.method === 'GET') {
-      return res.status(200).json(await readGuests());
+      return res.status(200).json(guests);
     }
 
     const body = req.body || {};
@@ -36,10 +39,9 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const name = (typeof body.name === 'string' ? body.name : '').trim().slice(0, 40);
       if (!name) return res.status(400).json({ error: 'Invalid name' });
-      const guests = await readGuests();
       if (!guests.includes(name)) {
         guests.push(name);
-        await writeGuests(guests);
+        await writeGuests(record, guests);
       }
       return res.status(200).json(guests);
     }
@@ -47,9 +49,8 @@ export default async function handler(req, res) {
     if (req.method === 'DELETE') {
       const { name, password } = body;
       if (password !== 'gabi') return res.status(403).json({ error: 'wrong_password' });
-      const guests = await readGuests();
       const updated = guests.filter(g => g !== name);
-      await writeGuests(updated);
+      await writeGuests(record, updated);
       return res.status(200).json(updated);
     }
 

@@ -19,7 +19,8 @@
       "Bash(cat /home/ido/gabii/api/*.js)",
       "Bash(cat /home/ido/gabii/api/*.ts)",
       "Bash(python3 -c \"import sys,json; p=json.load\\(sys.stdin\\); print\\(p.get\\('main',''\\), p.get\\('module',''\\), p.get\\('browser',''\\), list\\(p.get\\('exports',{}\\).keys\\(\\)\\)[:10]\\)\")",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(git push:*)"
     ]
   }
 }
