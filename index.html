@@ -576,6 +576,117 @@
   </div>
 </section>
 
+<!-- PHOTO BOOTH -->
+<section class="info-section" style="padding-top:0">
+  <div class="info-card photobooth-card">
+    <h2>📸 פוטובות מסיגבי! 📸</h2>
+    <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:1.5rem;">צלם/י סלפי עם פילטר מסיבתי — ושמור/י לזיכרון! 🎉</p>
+
+    <div class="pb-filter-row" id="pb-filter-row">
+      <button class="pb-filter-btn active" onclick="pbSetFilter(0)">🦆 ברווז</button>
+      <button class="pb-filter-btn" onclick="pbSetFilter(1)">🥳 כובע</button>
+      <button class="pb-filter-btn" onclick="pbSetFilter(2)">🕶️ משקפיים</button>
+      <button class="pb-filter-btn" onclick="pbSetFilter(3)">🥋 גי</button>
+      <button class="pb-filter-btn" onclick="pbSetFilter(4)">🎉 קונפטי</button>
+    </div>
+
+    <div class="pb-viewport">
+      <video id="pb-video" autoplay playsinline muted></video>
+      <canvas id="pb-canvas"></canvas>
+      <div class="pb-shutter-flash" id="pb-shutter-flash"></div>
+    </div>
+
+    <div class="pb-controls">
+      <button class="pb-snap-btn" id="pb-snap-btn" onclick="pbSnap()">📸 צלם!</button>
+      <button class="pb-cam-btn" id="pb-cam-btn" onclick="pbStartCamera()">📷 פתח מצלמה</button>
+    </div>
+
+    <div class="pb-result" id="pb-result" style="display:none">
+      <img id="pb-result-img" alt="תמונה" />
+      <div class="pb-result-btns">
+        <button class="btn-yes" onclick="pbDownload()">⬇️ הורד תמונה</button>
+        <button class="btn-no" onclick="pbRetake()">🔄 צלם שוב</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
+<!-- KARATE GAME -->
+<section class="karate-section" id="karate-section">
+  <h2 class="section-title" style="text-align:center;">🥋 קארטה עד המסיבה! 🥋</h2>
+  <p style="text-align:center;color:rgba(255,255,255,0.45);font-size:0.9rem;margin-top:-1rem;margin-bottom:1.5rem;">גבי צריך להילחם את דרכו אל המסיבה — עזור לו!</p>
+
+  <div class="karate-wrapper" id="karate-wrapper">
+    <!-- MAP SCREEN -->
+    <div class="karate-map-screen" id="karate-map-screen" style="display:none">
+      <div class="karate-map-inner">
+        <div class="karate-map-title">🗺️ המסע של גבי</div>
+        <div class="karate-map-stops" id="karate-map-stops"></div>
+        <button class="btn-party karate-story-btn" id="karate-map-btn" onclick="karateMapContinue()">▶ המשך</button>
+      </div>
+    </div>
+
+    <!-- STORY SCREEN -->
+    <div class="karate-story-screen" id="karate-story-screen">
+      <div class="karate-story-inner">
+        <div class="karate-story-emoji" id="karate-story-emoji">🥋</div>
+        <div class="karate-story-title" id="karate-story-title">קארטה עד המסיבה!</div>
+        <div class="karate-story-text" id="karate-story-text">גבי מוכן למסיבה — גי מגוהץ, רוח קרב גבוהה.<br>אבל הדרך אל המסיבה חסומה על ידי אויבים!<br>הילחם את דרכך אל השמחה! 🎉</div>
+        <button class="btn-party karate-story-btn" id="karate-story-btn" onclick="karateStoryAction()">▶ צא לדרך!</button>
+      </div>
+    </div>
+
+    <!-- GAME CANVAS AREA -->
+    <div class="karate-game-area" id="karate-game-area" style="display:none">
+      <div class="karate-hud">
+        <div class="karate-hud-fighter">
+          <div class="karate-hud-name">גבי 🥋</div>
+          <div class="karate-hp-bar-wrap"><div class="karate-hp-bar karate-hp-player" id="karate-hp-player"></div></div>
+          <div class="karate-hp-num" id="karate-hp-player-num">100</div>
+        </div>
+        <div class="karate-round-display" id="karate-round-display">שלב 1</div>
+        <div class="karate-hud-fighter karate-hud-enemy">
+          <div class="karate-hud-name" id="karate-enemy-name">אויב 🦆</div>
+          <div class="karate-hp-bar-wrap"><div class="karate-hp-bar karate-hp-enemy" id="karate-hp-enemy"></div></div>
+          <div class="karate-hp-num" id="karate-hp-enemy-num">100</div>
+        </div>
+      </div>
+      <canvas id="karate-canvas"></canvas>
+      <div class="karate-status-bar" id="karate-status-bar">לחץ להתחיל!</div>
+      <!-- TOUCH CONTROLS -->
+      <div class="karate-touch-controls" id="karate-touch-controls">
+        <div class="karate-touch-left">
+          <button class="ktc-btn ktc-move" id="ktc-left"
+            ontouchstart="event.preventDefault();karateKeyDown('ArrowLeft')" ontouchend="event.preventDefault();karateKeyUp('ArrowLeft')"
+            onmousedown="karateKeyDown('ArrowLeft')" onmouseup="karateKeyUp('ArrowLeft')" onmouseleave="karateKeyUp('ArrowLeft')">◀</button>
+          <button class="ktc-btn ktc-move" id="ktc-right"
+            ontouchstart="event.preventDefault();karateKeyDown('ArrowRight')" ontouchend="event.preventDefault();karateKeyUp('ArrowRight')"
+            onmousedown="karateKeyDown('ArrowRight')" onmouseup="karateKeyUp('ArrowRight')" onmouseleave="karateKeyUp('ArrowRight')">▶</button>
+        </div>
+        <div class="karate-touch-right">
+          <button class="ktc-btn ktc-block"
+            ontouchstart="event.preventDefault();karateKeyDown('KeyA')" ontouchend="event.preventDefault();karateKeyUp('KeyA')"
+            onmousedown="karateKeyDown('KeyA')" onmouseup="karateKeyUp('KeyA')" onmouseleave="karateKeyUp('KeyA')">🛡️</button>
+          <button class="ktc-btn ktc-kick"
+            ontouchstart="event.preventDefault();karateKeyDown('KeyX')" ontouchend="event.preventDefault();karateKeyUp('KeyX')"
+            onmousedown="karateKeyDown('KeyX')" onmouseup="karateKeyUp('KeyX')" onmouseleave="karateKeyUp('KeyX')">🦵</button>
+          <button class="ktc-btn ktc-punch"
+            ontouchstart="event.preventDefault();karateKeyDown('KeyZ')" ontouchend="event.preventDefault();karateKeyUp('KeyZ')"
+            onmousedown="karateKeyDown('KeyZ')" onmouseup="karateKeyUp('KeyZ')" onmouseleave="karateKeyUp('KeyZ')">👊</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="karate-controls-hint" id="karate-controls-hint">
+    <span>⌨️ מקלדת: ←→ זוז &nbsp;|&nbsp; Z פאנץ׳ &nbsp;|&nbsp; X בעיטה &nbsp;|&nbsp; A חסום</span>
+  </div>
+</section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
 <!-- NOTICEBOARD -->
 <section class="info-section" style="padding-top:0">
   <div class="info-card noticeboard-card">

@@ -2383,7 +2383,7 @@ function cgDownload() {
   setTimeout(() => {
     const canvas = document.getElementById('cg-card-canvas');
     const link = document.createElement('a');
-    link.download = 'masigabi-card.png';
+    link.download = 'mesigabi-card.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
     showToast('🎉 הכרטיס הורד!');
@@ -2509,6 +2509,1250 @@ function generateOutfit() {
   createConfetti(canvas.width / 2, canvas.height / 2, 15, true);
   showToast('✨ לוק מנצח! בוא/י ככה למסיגבי!');
 }
+
+// ========== PHOTO BOOTH ==========
+(function() {
+  let pbStream = null;
+  let pbFilterIdx = 0;
+  let pbRafId = null;
+  let pbSnapped = false;
+
+  const FILTERS = [
+    { id: 'duck',      label: '🦆 ברווז' },
+    { id: 'hat',       label: '🥳 כובע' },
+    { id: 'shades',    label: '🕶️ משקפיים' },
+    { id: 'gi',        label: '🥋 גי' },
+    { id: 'confetti',  label: '🎉 קונפטי' },
+  ];
+
+  // Deterministic confetti dots seeded per frame
+  const CONFETTI_COLORS = ['#FF2D7A','#FFD600','#7C3AED','#00D4C8','#FF6B00','#A3FF00'];
+  const CONFETTI_DOTS = Array.from({length: 28}, (_, i) => ({
+    x: (i * 137.5) % 100,
+    y: (i * 79.3 + 11) % 100,
+    r: 4 + (i % 4),
+    c: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    dx: ((i * 31) % 7) - 3,
+  }));
+
+  function getVideo()  { return document.getElementById('pb-video'); }
+  function getCanvas() { return document.getElementById('pb-canvas'); }
+  function getCtx()    { return getCanvas().getContext('2d'); }
+
+  function pbSetFilter(idx) {
+    pbFilterIdx = idx;
+    document.querySelectorAll('.pb-filter-btn').forEach((b, i) =>
+      b.classList.toggle('active', i === idx));
+  }
+  window.pbSetFilter = pbSetFilter;
+
+  function pbStartCamera() {
+    const btn = document.getElementById('pb-cam-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ פותח...';
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } })
+      .then(stream => {
+        pbStream = stream;
+        const video = getVideo();
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          video.play();
+          const canvas = getCanvas();
+          canvas.width  = video.videoWidth  || 640;
+          canvas.height = video.videoHeight || 480;
+          document.getElementById('pb-snap-btn').style.display = 'inline-flex';
+          btn.style.display = 'none';
+          document.getElementById('pb-result').style.display = 'none';
+          pbSnapped = false;
+          pbRenderLoop();
+        };
+      })
+      .catch(() => {
+        btn.disabled = false;
+        btn.textContent = '📷 פתח מצלמה';
+        showToast('לא ניתן לגשת למצלמה 😢');
+      });
+  }
+  window.pbStartCamera = pbStartCamera;
+
+  function pbRenderLoop() {
+    if (pbSnapped) return;
+    const video = getVideo();
+    const canvas = getCanvas();
+    const ctx = getCtx();
+    if (!video.videoWidth) { pbRafId = requestAnimationFrame(pbRenderLoop); return; }
+
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const W = canvas.width, H = canvas.height;
+
+    // Mirror video
+    ctx.save();
+    ctx.translate(W, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, W, H);
+    ctx.restore();
+
+    // Apply filter overlay
+    drawFilter(ctx, W, H, FILTERS[pbFilterIdx].id);
+
+    pbRafId = requestAnimationFrame(pbRenderLoop);
+  }
+
+  function drawFilter(ctx, W, H, id) {
+    // Face region estimate: center-upper area for selfie
+    const fx = W * 0.5;   // face center x
+    const fy = H * 0.32;  // face center y
+    const fs = Math.min(W, H) * 0.28; // face size unit
+
+    if (id === 'duck') {
+      // Orange duck bill on lower face
+      ctx.save();
+      ctx.fillStyle = '#FF8C00';
+      ctx.strokeStyle = '#cc6600';
+      ctx.lineWidth = 2;
+      // Upper bill
+      ctx.beginPath();
+      ctx.ellipse(fx, fy + fs * 0.55, fs * 0.38, fs * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      // Lower bill
+      ctx.fillStyle = '#e07800';
+      ctx.beginPath();
+      ctx.ellipse(fx, fy + fs * 0.65, fs * 0.32, fs * 0.1, 0, 0, Math.PI);
+      ctx.fill();
+      // Duck eyes (above bill)
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(fx - fs*0.22, fy + fs*0.1, fs*0.1, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(fx + fs*0.22, fy + fs*0.1, fs*0.1, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(fx - fs*0.2,  fy + fs*0.1, fs*0.05, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(fx + fs*0.2,  fy + fs*0.1, fs*0.05, 0, Math.PI*2); ctx.fill();
+      // Yellow duck head feathers
+      ctx.fillStyle = '#FFD600';
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.ellipse(fx + i * fs*0.12, fy - fs*0.55, fs*0.08, fs*0.18, i*0.3, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+    } else if (id === 'hat') {
+      // Party hat on top of head
+      ctx.save();
+      const hx = fx, hy = fy - fs * 0.52;
+      const hw = fs * 0.7, hh = fs * 1.0;
+      // Hat cone
+      const grad = ctx.createLinearGradient(hx - hw/2, hy, hx + hw/2, hy - hh);
+      grad.addColorStop(0, '#FF2D7A'); grad.addColorStop(0.5, '#7C3AED'); grad.addColorStop(1, '#FFD600');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(hx - hw/2, hy);
+      ctx.lineTo(hx + hw/2, hy);
+      ctx.lineTo(hx, hy - hh);
+      ctx.closePath(); ctx.fill();
+      // Stripe
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.globalAlpha = 0.4;
+      ctx.beginPath(); ctx.moveTo(hx - hw*0.3, hy - hh*0.3); ctx.lineTo(hx + hw*0.1, hy - hh*0.3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(hx - hw*0.15, hy - hh*0.6); ctx.lineTo(hx + hw*0.05, hy - hh*0.6); ctx.stroke();
+      ctx.globalAlpha = 1;
+      // Brim
+      ctx.fillStyle = '#FFD600';
+      ctx.beginPath(); ctx.ellipse(hx, hy, hw/2 + 8, 10, 0, 0, Math.PI*2); ctx.fill();
+      // Pom-pom
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(hx, hy - hh, fs*0.1, 0, Math.PI*2); ctx.fill();
+      // Elastic string
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(hx - hw/2, hy);
+      ctx.quadraticCurveTo(hx - hw*0.8, hy + fs*0.4, fx - fs*0.42, fy + fs*0.5);
+      ctx.stroke();
+      ctx.restore();
+
+    } else if (id === 'shades') {
+      // Sunglasses
+      ctx.save();
+      const sy = fy + fs * 0.02;
+      const lx = fx - fs * 0.25, rx = fx + fs * 0.25;
+      const lensW = fs * 0.28, lensH = fs * 0.2;
+      // Frame bar
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(lx + lensW*0.9, sy); ctx.lineTo(rx - lensW*0.9, sy); ctx.stroke();
+      // Left lens
+      const lgr = ctx.createRadialGradient(lx, sy, 2, lx, sy, lensW);
+      lgr.addColorStop(0, 'rgba(80,0,120,0.85)'); lgr.addColorStop(1, 'rgba(20,0,50,0.95)');
+      ctx.fillStyle = lgr;
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(lx, sy, lensW, lensH, -0.15, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+      // Right lens
+      const rgr = ctx.createRadialGradient(rx, sy, 2, rx, sy, lensW);
+      rgr.addColorStop(0, 'rgba(80,0,120,0.85)'); rgr.addColorStop(1, 'rgba(20,0,50,0.95)');
+      ctx.fillStyle = rgr;
+      ctx.beginPath(); ctx.ellipse(rx, sy, lensW, lensH, 0.15, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+      // Shine
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.beginPath(); ctx.ellipse(lx - lensW*0.2, sy - lensH*0.2, lensW*0.3, lensH*0.2, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(rx - lensW*0.1, sy - lensH*0.2, lensW*0.3, lensH*0.2, -0.3, 0, Math.PI*2); ctx.fill();
+      // Arms
+      ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(lx - lensW, sy); ctx.lineTo(lx - lensW - fs*0.28, sy - fs*0.05); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(rx + lensW, sy); ctx.lineTo(rx + lensW + fs*0.28, sy - fs*0.05); ctx.stroke();
+      ctx.restore();
+
+    } else if (id === 'gi') {
+      // White karate gi collar overlay on shoulders
+      ctx.save();
+      const gy2 = fy + fs * 0.85;
+      const gw = fs * 1.6;
+      // Gi body
+      ctx.fillStyle = 'rgba(240,240,240,0.88)';
+      ctx.beginPath();
+      ctx.moveTo(fx - gw/2, H);
+      ctx.lineTo(fx - gw/2, gy2);
+      ctx.lineTo(fx - fs*0.15, gy2 - fs*0.1);
+      ctx.lineTo(fx, gy2 + fs*0.25);
+      ctx.lineTo(fx + fs*0.15, gy2 - fs*0.1);
+      ctx.lineTo(fx + gw/2, gy2);
+      ctx.lineTo(fx + gw/2, H);
+      ctx.closePath(); ctx.fill();
+      // Purple belt
+      ctx.fillStyle = 'rgba(124,58,237,0.9)';
+      ctx.fillRect(fx - gw/2, gy2 + fs*0.55, gw, fs*0.13);
+      // Belt knot
+      ctx.fillStyle = '#7C3AED';
+      ctx.beginPath(); ctx.roundRect
+        ? (ctx.roundRect(fx - fs*0.12, gy2 + fs*0.5, fs*0.24, fs*0.22, 4), ctx.fill())
+        : (ctx.fillRect(fx - fs*0.12, gy2 + fs*0.5, fs*0.24, fs*0.22));
+      // Belt tails
+      ctx.fillStyle = 'rgba(124,58,237,0.85)';
+      ctx.fillRect(fx - fs*0.25, gy2 + fs*0.72, fs*0.1, fs*0.4);
+      ctx.fillRect(fx + fs*0.15, gy2 + fs*0.72, fs*0.1, fs*0.4);
+      // Gi lapel lines
+      ctx.strokeStyle = 'rgba(180,180,180,0.7)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(fx, gy2 + fs*0.25); ctx.lineTo(fx - fs*0.4, gy2 + fs*0.8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx, gy2 + fs*0.25); ctx.lineTo(fx + fs*0.4, gy2 + fs*0.8); ctx.stroke();
+      ctx.restore();
+
+    } else if (id === 'confetti') {
+      // Animated confetti rain
+      const t = Date.now() / 1000;
+      ctx.save();
+      CONFETTI_DOTS.forEach((d, i) => {
+        const x = ((d.x + d.dx * t * 8) % 100 + 100) % 100 / 100 * W;
+        const y = ((d.y + t * 25 * (0.7 + (i % 5) * 0.12)) % 100) / 100 * H;
+        ctx.fillStyle = d.c;
+        ctx.globalAlpha = 0.82;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(t * 2 + i);
+        ctx.fillRect(-d.r/2, -d.r/2, d.r, d.r * 0.5);
+        ctx.restore();
+      });
+      // Party text banner
+      ctx.globalAlpha = 0.9;
+      ctx.font = `bold ${Math.round(fs*0.32)}px Heebo, Arial`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#FFD600';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 4;
+      ctx.strokeText('🎉 מסיגבי! 🎉', W/2, H * 0.12);
+      ctx.fillText('🎉 מסיגבי! 🎉', W/2, H * 0.12);
+      ctx.restore();
+    }
+  }
+
+  function pbSnap() {
+    if (!pbStream) return;
+    pbSnapped = true;
+    cancelAnimationFrame(pbRafId);
+
+    // Final render one more time
+    const video = getVideo();
+    const canvas = getCanvas();
+    const ctx = getCtx();
+    const W = canvas.width, H = canvas.height;
+    ctx.save();
+    ctx.translate(W, 0); ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, W, H);
+    ctx.restore();
+    drawFilter(ctx, W, H, FILTERS[pbFilterIdx].id);
+
+    // Shutter flash
+    const flash = document.getElementById('pb-shutter-flash');
+    flash.classList.add('flash');
+    setTimeout(() => flash.classList.remove('flash'), 300);
+
+    // Show result
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const img = document.getElementById('pb-result-img');
+    img.src = dataUrl;
+    document.getElementById('pb-result').style.display = 'block';
+    document.getElementById('pb-snap-btn').style.display = 'none';
+    showToast('📸 תמונה נלכדה! הורד אותה 🎉');
+  }
+  window.pbSnap = pbSnap;
+
+  function pbDownload() {
+    const canvas = getCanvas();
+    const a = document.createElement('a');
+    a.download = 'masigabi-photo.jpg';
+    a.href = canvas.toDataURL('image/jpeg', 0.92);
+    a.click();
+  }
+  window.pbDownload = pbDownload;
+
+  function pbRetake() {
+    pbSnapped = false;
+    document.getElementById('pb-result').style.display = 'none';
+    document.getElementById('pb-snap-btn').style.display = 'inline-flex';
+    pbRenderLoop();
+  }
+  window.pbRetake = pbRetake;
+})();
+
+// ========== KARATE GAME ==========
+(function() {
+
+const CANVAS_W = 600;
+const CANVAS_H = 280;
+
+// Opponents in order
+const OPPONENTS = [
+  { name: 'ברווז השכן 🦆', emoji: '🦆', color: '#FFD600', hp: 55,  speed: 1.1, aggression: 0.18, blockRate: 0.1,  scene: 'house' },
+  { name: 'ברווז הנהג 🦆🚕', emoji: '🦆', color: '#FF6B00', hp: 70, speed: 1.3, aggression: 0.28, blockRate: 0.15, scene: 'street' },
+  { name: 'ברווז הביטחון ✈️🦆', emoji: '🦆', color: '#00D4C8', hp: 85, speed: 1.5, aggression: 0.32, blockRate: 0.2,  scene: 'airport' },
+  { name: 'ברווז הדייל 🦆🛫', emoji: '🦆', color: '#7C3AED', hp: 95, speed: 1.7, aggression: 0.38, blockRate: 0.22, scene: 'plane' },
+  { name: 'אריה המאבטח 🦁🎊', emoji: '🦁', color: '#A3FF00', hp: 120, speed: 1.6, aggression: 0.45, blockRate: 0.28, scene: 'santorini', boss: true },
+];
+
+// Journey map stops — one per opponent + final destination
+const MAP_STOPS = [
+  { label: 'בית גבי', sublabel: 'פתח תקווה', emoji: '🏠' },
+  { label: 'הרחוב', sublabel: 'פ"ת', emoji: '🛣️' },
+  { label: 'נתב"ג', sublabel: 'שדה התעופה', emoji: '✈️' },
+  { label: 'במטוס', sublabel: 'מעל הים', emoji: '🛫' },
+  { label: 'סנטוריני', sublabel: 'יוון 🇬🇷', emoji: '🏝️' },
+  { label: 'המסיבה!', sublabel: 'הגעת!!!', emoji: '🎉' },
+];
+
+const STORY_SCREENS = [
+  { emoji: '🥋', title: 'קארטה עד המסיבה!', text: 'גבי לבוש גי, מוכן לצאת מהבית בפתח תקווה.\nהדרך לסנטוריני ארוכה — וברווזים בכל פינה!\nהילחם את דרכך אל המסיבה! 🎉', btn: '▶ צא מהבית!' },
+  { emoji: '🦆', title: 'ברווז השכן', text: 'יצאת מהבית — והשכן ברווז עומד בשביל.\n"לאן אתה הולך בגי?!"\nאין זמן להסברים. קארטה! 🥋', btn: '▶ להילחם!' },
+  { emoji: '🦆🚕', title: 'ברווז הנהג', text: 'הגעת לרחוב — אבל נהג המונית הוא ברווז זועם.\n"הנסיעה לשדה התעופה? רק תעביר אותי!"\nהוא גדול. הוא צהוב. קדימה! 💪', btn: '▶ קדימה!' },
+  { emoji: '✈️🦆', title: 'ברווז הביטחון', text: 'נתב"ג — שדה התעופה ב"ג.\nברווז ביטחון עם ווקי-טוקי עומד בשער.\n"גי של קארטה לא עובר ביטחון!"\nהוכח לו אחרת. 🛂', btn: '▶ לשער!' },
+  { emoji: '🦆🛫', title: 'ברווז הדייל', text: 'על המטוס — ברווז דייל חוסם את המעבר.\n"מקום 14B — שב ואל תזוז!"\nעוד שעתיים ליוון. אין סיכוי שתשב. 🛫', btn: '▶ לעמוד!' },
+  { emoji: '🦁🎊', title: '⚠️ בוס סופי — אריה המאבטח!', text: 'סנטוריני! הAirbnb שם, המסיבה ממש מאחורי הדלת!\nאבל אריה ענק עומד בכניסה.\n"רשימת מוזמנים בלבד!" — גבי, זה הרגע שלך! 🦁🔥', btn: '▶ לקרב הסופי!' },
+];
+
+const WIN_STORY = { emoji: '🎉', title: 'גבי הגיע למסיבה!!!', text: 'האריה על הרצפה. הדלת פתוחה.\nגבי פורץ פנימה לאוויר הסנטוריני!\nהקהל משתגע. הקונפטי עף.\nגבי — אלוף הקארטה והמסיבה! 🏆🥋🦆', btn: '🎊 שחק שוב!' };
+
+// Game state
+let gState = null;
+let gRaf = null;
+let gKeys = {};
+let gCurrentRound = 0;
+// gPhase: 'intro'|'story'|'map'|'fight'|'win'
+let gPhase = 'intro';
+let gGameStarted = false;
+
+function karateStoryAction() {
+  if (gPhase === 'intro') {
+    gPhase = 'story';
+    showStory(STORY_SCREENS[1]);
+  } else if (gPhase === 'story') {
+    startFight(gCurrentRound);
+  } else if (gPhase === 'map') {
+    // After map, show next fight story or win
+    if (gCurrentRound >= OPPONENTS.length) {
+      gPhase = 'win';
+      showStory(WIN_STORY);
+    } else {
+      gPhase = 'story';
+      showStory(STORY_SCREENS[gCurrentRound + 1]);
+    }
+  } else if (gPhase === 'win') {
+    gCurrentRound = 0;
+    gPhase = 'intro';
+    showStory(STORY_SCREENS[0]);
+  }
+}
+window.karateStoryAction = karateStoryAction;
+
+function showStory(s) {
+  document.getElementById('karate-story-emoji').textContent = s.emoji;
+  document.getElementById('karate-story-title').textContent = s.title;
+  document.getElementById('karate-story-text').innerHTML = s.text.replace(/\n/g, '<br>');
+  document.getElementById('karate-story-btn').textContent = s.btn;
+  document.getElementById('karate-story-screen').style.display = 'flex';
+  document.getElementById('karate-map-screen').style.display = 'none';
+  document.getElementById('karate-game-area').style.display = 'none';
+}
+
+function showMap(completedRound) {
+  gPhase = 'map';
+  const mapEl = document.getElementById('karate-map-screen');
+  const stopsEl = document.getElementById('karate-map-stops');
+  // completedRound = index of round just won (0-based), so player is at stop completedRound+1
+  const playerStop = completedRound + 1;
+
+  stopsEl.innerHTML = MAP_STOPS.map((stop, i) => {
+    const done = i <= playerStop;
+    const current = i === playerStop;
+    return `<div class="kmap-stop ${done ? 'kmap-done' : ''} ${current ? 'kmap-current' : ''}">
+      <div class="kmap-node">${stop.emoji}</div>
+      <div class="kmap-label">${stop.label}</div>
+      <div class="kmap-sublabel">${stop.sublabel}</div>
+      ${current ? '<div class="kmap-you">← גבי</div>' : ''}
+    </div>
+    ${i < MAP_STOPS.length - 1 ? `<div class="kmap-line ${done && i < playerStop ? 'kmap-line-done' : ''}"></div>` : ''}`;
+  }).join('');
+
+  const nextLabel = completedRound + 1 >= OPPONENTS.length ? '🎉 למסיבה!' : `▶ המשך — ${MAP_STOPS[playerStop + 1]?.label || ''}`;
+  document.getElementById('karate-map-btn').textContent = nextLabel;
+
+  document.getElementById('karate-story-screen').style.display = 'none';
+  mapEl.style.display = 'flex';
+  document.getElementById('karate-game-area').style.display = 'none';
+}
+window.karateMapContinue = function() { karateStoryAction(); };
+
+function getCanvas() { return document.getElementById('karate-canvas'); }
+function getCtx() { return getCanvas().getContext('2d'); }
+
+function resizeCanvas() {
+  const canvas = getCanvas();
+  const wrapper = document.getElementById('karate-wrapper');
+  const maxW = Math.min(wrapper.clientWidth - 0, CANVAS_W);
+  canvas.style.width = maxW + 'px';
+  canvas.style.height = Math.round(maxW * CANVAS_H / CANVAS_W) + 'px';
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+}
+
+function startFight(roundIdx) {
+  gCurrentRound = roundIdx;
+  gPhase = 'fight';
+  const opp = OPPONENTS[roundIdx];
+
+  document.getElementById('karate-story-screen').style.display = 'none';
+  document.getElementById('karate-map-screen').style.display = 'none';
+  document.getElementById('karate-game-area').style.display = 'flex';
+  resizeCanvas();
+
+  document.getElementById('karate-round-display').textContent = `שלב ${roundIdx + 1} / ${OPPONENTS.length}`;
+  document.getElementById('karate-enemy-name').textContent = opp.name;
+  updateHUD(150, 150, opp.hp, opp.hp);
+
+  gState = makeState(opp);
+  gGameStarted = true;
+
+  if (gRaf) cancelAnimationFrame(gRaf);
+  gRaf = requestAnimationFrame(gameLoop);
+
+  document.getElementById('karate-status-bar').textContent = `סיבוב ${roundIdx + 1}: מול ${opp.name}`;
+}
+
+function makeState(opp) {
+  return {
+    player: {
+      x: 80, y: 0, vx: 0, vy: 0,
+      hp: 150, maxHp: 150,
+      facing: 1,
+      state: 'idle', // idle, walk, punch, kick, block, hurt, dead
+      stateTimer: 0,
+      attackCooldown: 0,
+      hurtFlash: 0,
+      blocking: false,
+      onGround: true,
+    },
+    enemy: {
+      x: CANVAS_W - 110, y: 0, vx: 0, vy: 0,
+      hp: opp.hp, maxHp: opp.hp,
+      facing: -1,
+      state: 'idle',
+      stateTimer: 0,
+      attackCooldown: 0,
+      hurtFlash: 0,
+      blocking: false,
+      onGround: true,
+      aiTimer: 0,
+      aiAction: null,
+      opp,
+    },
+    groundY: CANVAS_H - 60,
+    phase: 'fight', // fight, roundover
+    roundOverTimer: 0,
+    winner: null,
+    hitEffects: [],
+  };
+}
+
+const GROUND_Y = CANVAS_H - 60;
+const FIGHTER_W = 44;
+const FIGHTER_H = 72;
+const MOVE_SPEED = 2.8;
+const PUNCH_RANGE = 80;
+const KICK_RANGE = 95;
+const PUNCH_DMG = 12;
+const KICK_DMG = 20;
+const BLOCKED_DMG_FACTOR = 0.1;
+const KNOCKBACK = 7;
+
+function gameLoop() {
+  if (!gGameStarted) return;
+  update();
+  draw();
+  gRaf = requestAnimationFrame(gameLoop);
+}
+
+function update() {
+  const s = gState;
+  if (!s) return;
+  const p = s.player;
+  const e = s.enemy;
+
+  if (s.phase === 'roundover') {
+    s.roundOverTimer--;
+    if (s.roundOverTimer <= 0) {
+      cancelAnimationFrame(gRaf);
+      gGameStarted = false;
+      if (s.winner === 'player') {
+        gCurrentRound++;
+        showMap(gCurrentRound - 1);
+        if (gCurrentRound >= OPPONENTS.length) {
+          const confettiCanvas = document.getElementById('confetti-canvas');
+          createConfetti(confettiCanvas.width / 2, confettiCanvas.height / 2, 80, true);
+          showToast('🏆 גבי הגיע למסיבה! אלוף הקארטה!');
+        }
+      } else {
+        // Player lost — retry same round
+        gPhase = 'story';
+        showStory({ ...STORY_SCREENS[gCurrentRound + 1], btn: '🔄 נסה שוב!' });
+      }
+    }
+    return;
+  }
+
+  // Player input
+  const canAct = p.state !== 'hurt' && p.state !== 'dead';
+
+  if (canAct) {
+    p.blocking = gKeys['KeyA'] || gKeys['ShieldBtn'];
+
+    if (p.state !== 'punch' && p.state !== 'kick') {
+      if (gKeys['ArrowLeft']) { p.vx = -MOVE_SPEED; p.facing = -1; p.state = 'walk'; }
+      else if (gKeys['ArrowRight']) { p.vx = MOVE_SPEED; p.facing = 1; p.state = 'walk'; }
+      else { p.vx = 0; if (p.state === 'walk') p.state = 'idle'; }
+    }
+
+    if ((gKeys['KeyZ'] || gKeys['PunchBtn']) && p.attackCooldown <= 0 && p.state !== 'punch' && p.state !== 'kick') {
+      p.state = 'punch'; p.stateTimer = 18; p.attackCooldown = 28;
+      tryHit(p, e, 'punch');
+    }
+    if ((gKeys['KeyX'] || gKeys['KickBtn']) && p.attackCooldown <= 0 && p.state !== 'punch' && p.state !== 'kick') {
+      p.state = 'kick'; p.stateTimer = 22; p.attackCooldown = 34;
+      tryHit(p, e, 'kick');
+    }
+  } else {
+    p.vx = 0;
+  }
+
+  // Enemy AI
+  updateEnemyAI(e, p);
+
+  // Physics
+  [p, e].forEach(f => {
+    f.x += f.vx;
+    f.x = Math.max(10, Math.min(CANVAS_W - 10 - FIGHTER_W, f.x));
+
+    if (f.stateTimer > 0) {
+      f.stateTimer--;
+      if (f.stateTimer === 0) f.state = 'idle';
+    }
+    if (f.attackCooldown > 0) f.attackCooldown--;
+    if (f.hurtFlash > 0) f.hurtFlash--;
+  });
+
+  // Hit effects
+  s.hitEffects = s.hitEffects.filter(h => { h.life--; return h.life > 0; });
+
+  // Check death
+  if (p.hp <= 0 && s.phase === 'fight') {
+    p.state = 'dead'; s.phase = 'roundover'; s.winner = 'enemy'; s.roundOverTimer = 90;
+    document.getElementById('karate-status-bar').textContent = '😢 גבי הובס... נסה שוב!';
+  }
+  if (e.hp <= 0 && s.phase === 'fight') {
+    e.state = 'dead'; s.phase = 'roundover'; s.winner = 'player'; s.roundOverTimer = 90;
+    document.getElementById('karate-status-bar').textContent = '🎉 ניצחון! ממשיך הלאה...';
+    showToast(`🥋 הכה את ${e.opp.name}!`);
+  }
+
+  updateHUD(p.hp, p.maxHp, e.hp, e.opp.hp);
+}
+
+function tryHit(attacker, defender, type) {
+  const dist = Math.abs((attacker.x + FIGHTER_W / 2) - (defender.x + FIGHTER_W / 2));
+  const range = type === 'punch' ? PUNCH_RANGE : KICK_RANGE;
+  const facingOk = attacker.facing === Math.sign((defender.x + FIGHTER_W / 2) - (attacker.x + FIGHTER_W / 2));
+  if (dist <= range && facingOk) {
+    let dmg = type === 'punch' ? PUNCH_DMG : KICK_DMG;
+    if (defender.blocking) dmg = Math.round(dmg * BLOCKED_DMG_FACTOR);
+    defender.hp = Math.max(0, defender.hp - dmg);
+    if (!defender.blocking) {
+      defender.state = 'hurt'; defender.stateTimer = 16;
+      defender.vx = -attacker.facing * KNOCKBACK;
+    }
+    defender.hurtFlash = 10;
+    gState.hitEffects.push({
+      x: defender.x + FIGHTER_W / 2,
+      y: defender.y + FIGHTER_H * 0.3,
+      text: type === 'punch' ? `👊 -${dmg}` : `🦵 -${dmg}`,
+      life: 30, maxLife: 30,
+    });
+  }
+}
+
+function updateEnemyAI(e, p) {
+  if (e.state === 'dead' || e.state === 'hurt') return;
+  e.aiTimer--;
+  const opp = e.opp;
+  const dist = Math.abs((e.x + FIGHTER_W / 2) - (p.x + FIGHTER_W / 2));
+  const facingPlayer = Math.sign((p.x + FIGHTER_W / 2) - (e.x + FIGHTER_W / 2));
+
+  // Always face player
+  e.facing = facingPlayer;
+
+  if (e.aiTimer > 0) {
+    // Execute current AI action
+    if (e.aiAction === 'approach') {
+      e.vx = facingPlayer * opp.speed;
+      e.state = 'walk';
+    } else if (e.aiAction === 'retreat') {
+      e.vx = -facingPlayer * opp.speed;
+      e.state = 'walk';
+    } else if (e.aiAction === 'block') {
+      e.vx = 0; e.blocking = true; e.state = 'block';
+    } else if (e.aiAction === 'punch') {
+      e.vx = 0; e.blocking = false;
+      if (e.attackCooldown <= 0) {
+        e.state = 'punch'; e.stateTimer = 18; e.attackCooldown = 55;
+        tryHit(e, p, 'punch');
+      }
+    } else if (e.aiAction === 'kick') {
+      e.vx = 0; e.blocking = false;
+      if (e.attackCooldown <= 0) {
+        e.state = 'kick'; e.stateTimer = 22; e.attackCooldown = 65;
+        tryHit(e, p, 'kick');
+      }
+    } else {
+      e.vx = 0; e.blocking = false;
+    }
+    return;
+  }
+
+  // Decide next action
+  e.blocking = false;
+  const r = Math.random();
+  const inRange = dist < KICK_RANGE + 10;
+  const closeRange = dist < PUNCH_RANGE + 5;
+
+  if (inRange && r < opp.blockRate && (p.state === 'punch' || p.state === 'kick')) {
+    e.aiAction = 'block'; e.aiTimer = 20;
+  } else if (closeRange && r < opp.aggression) {
+    e.aiAction = r < 0.5 ? 'punch' : 'kick';
+    e.aiTimer = 15;
+  } else if (inRange && r < opp.aggression * 1.4) {
+    e.aiAction = r < 0.5 ? 'punch' : 'kick';
+    e.aiTimer = 20;
+  } else if (dist > 120) {
+    e.aiAction = 'approach'; e.aiTimer = 25;
+  } else if (dist < 40) {
+    e.aiAction = r < 0.5 ? 'retreat' : (r < 0.7 ? 'kick' : 'punch');
+    e.aiTimer = 20;
+  } else {
+    e.aiAction = r < 0.4 ? 'approach' : (r < 0.6 ? 'idle' : 'approach');
+    e.aiTimer = 18;
+  }
+}
+
+function updateHUD(playerHp, playerMaxHp, enemyHp, enemyMaxHp) {
+  const ph = Math.max(0, Math.min(100, (playerHp / playerMaxHp) * 100));
+  const eh = Math.max(0, Math.min(100, (enemyHp / enemyMaxHp) * 100));
+  document.getElementById('karate-hp-player').style.width = ph + '%';
+  document.getElementById('karate-hp-enemy').style.width = eh + '%';
+  document.getElementById('karate-hp-player-num').textContent = Math.max(0, Math.round(playerHp));
+  document.getElementById('karate-hp-enemy-num').textContent = Math.max(0, Math.round(enemyHp));
+
+  // Color player HP bar
+  const playerBar = document.getElementById('karate-hp-player');
+  playerBar.style.background = ph > 50 ? '#A3FF00' : ph > 25 ? '#FFD600' : '#FF2D7A';
+  const enemyBar = document.getElementById('karate-hp-enemy');
+  enemyBar.style.background = eh > 50 ? '#FF2D7A' : eh > 25 ? '#FFD600' : '#A3FF00';
+}
+
+// ---- DRAWING ----
+
+function draw() {
+  const canvas = getCanvas();
+  const ctx = getCtx();
+  const s = gState;
+  if (!s) return;
+
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Background — each scene paints sky + ground
+  drawBackground(ctx, gCurrentRound);
+
+  // Fighters
+  drawFighter(ctx, s.player, false, gCurrentRound);
+  drawFighter(ctx, s.enemy, true, gCurrentRound);
+
+  // Hit effects
+  s.hitEffects.forEach(h => {
+    ctx.save();
+    const alpha = h.life / h.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 16px Heebo, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#FFD600';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    const yOff = (1 - h.life / h.maxLife) * 25;
+    ctx.strokeText(h.text, h.x, h.y - yOff);
+    ctx.fillText(h.text, h.x, h.y - yOff);
+    ctx.restore();
+  });
+
+  // Round over overlay
+  if (s.phase === 'roundover') {
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 38px Heebo, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = s.winner === 'player' ? '#A3FF00' : '#FF2D7A';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 5;
+    const txt = s.winner === 'player' ? '🏆 ניצחת!' : '💀 הובסת...';
+    ctx.strokeText(txt, CANVAS_W / 2, CANVAS_H / 2);
+    ctx.fillText(txt, CANVAS_W / 2, CANVAS_H / 2);
+    ctx.restore();
+  }
+}
+
+function drawBackground(ctx, round) {
+  const scene = OPPONENTS[round]?.scene || 'house';
+  if (scene === 'house') drawBgHouse(ctx);
+  else if (scene === 'street') drawBgStreet(ctx);
+  else if (scene === 'airport') drawBgAirport(ctx);
+  else if (scene === 'plane') drawBgPlane(ctx);
+  else if (scene === 'santorini') drawBgSantorini(ctx);
+}
+
+function drawBgHouse(ctx) {
+  // Night sky, petah tikva suburb
+  const grad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+  grad.addColorStop(0, '#0a0520'); grad.addColorStop(1, '#1a0a35');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, CANVAS_W, GROUND_Y);
+  // Moon
+  ctx.fillStyle = '#fffde0';
+  ctx.beginPath(); ctx.arc(520, 30, 22, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#e8e0b0';
+  ctx.beginPath(); ctx.arc(530, 25, 16, 0, Math.PI * 2); ctx.fill();
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  [[40,15],[90,30],[160,10],[250,22],[340,8],[420,18],[80,55],[200,40],[450,50]].forEach(([x,y])=>{
+    ctx.beginPath(); ctx.arc(x,y,1.2,0,Math.PI*2); ctx.fill();
+  });
+  // House (gabi's)
+  ctx.fillStyle = '#2a1a4a';
+  ctx.fillRect(30, GROUND_Y - 90, 80, 90);
+  ctx.fillStyle = '#3d2a60';
+  ctx.beginPath(); ctx.moveTo(20, GROUND_Y-90); ctx.lineTo(70, GROUND_Y-130); ctx.lineTo(120, GROUND_Y-90); ctx.closePath(); ctx.fill();
+  // Windows (lit yellow)
+  ctx.fillStyle = '#FFD600';
+  ctx.fillRect(42, GROUND_Y-75, 18, 16);
+  ctx.fillRect(70, GROUND_Y-75, 18, 16);
+  // Door
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(60, GROUND_Y-35, 20, 35);
+  // Second house
+  ctx.fillStyle = '#1e1535';
+  ctx.fillRect(430, GROUND_Y-70, 60, 70);
+  ctx.fillStyle = '#2a1e50';
+  ctx.beginPath(); ctx.moveTo(425,GROUND_Y-70); ctx.lineTo(460,GROUND_Y-100); ctx.lineTo(495,GROUND_Y-70); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,214,0,0.5)'; ctx.fillRect(445,GROUND_Y-58,14,12); ctx.fillRect(465,GROUND_Y-58,14,12);
+  // Ground — sidewalk
+  ctx.fillStyle = '#2a1a45'; ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y);
+  ctx.fillStyle = '#4a3a70'; ctx.fillRect(0, GROUND_Y, CANVAS_W, 4);
+  // Location label
+  ctx.save(); ctx.font = 'bold 11px Heebo, Arial'; ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.textAlign = 'right'; ctx.fillText('🏠 פתח תקווה', CANVAS_W - 8, 18); ctx.restore();
+}
+
+function drawBgStreet(ctx) {
+  // Early morning, street heading to airport
+  const grad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+  grad.addColorStop(0, '#1a0a05'); grad.addColorStop(0.5, '#3d1c00'); grad.addColorStop(1, '#5c2800');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, CANVAS_W, GROUND_Y);
+  // Orange sunrise glow
+  ctx.save(); ctx.globalAlpha = 0.4;
+  const sunGrad = ctx.createRadialGradient(CANVAS_W*0.8, GROUND_Y, 10, CANVAS_W*0.8, GROUND_Y, 120);
+  sunGrad.addColorStop(0,'#FF6B00'); sunGrad.addColorStop(1,'transparent');
+  ctx.fillStyle = sunGrad; ctx.fillRect(0,0,CANVAS_W,GROUND_Y); ctx.restore();
+  // Sun peeking
+  ctx.fillStyle = '#FF9900';
+  ctx.beginPath(); ctx.arc(CANVAS_W*0.82, GROUND_Y+5, 30, Math.PI, 0); ctx.fill();
+  // Street lamp left
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(50, GROUND_Y); ctx.lineTo(50, GROUND_Y-90); ctx.lineTo(80, GROUND_Y-90); ctx.stroke();
+  ctx.fillStyle = '#FFD060'; ctx.fillRect(72, GROUND_Y-96, 20, 10);
+  ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle='#FFD060';
+  ctx.beginPath(); ctx.arc(82, GROUND_Y-90, 25, 0, Math.PI*2); ctx.fill(); ctx.restore();
+  // Street lamp right
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(480, GROUND_Y); ctx.lineTo(480, GROUND_Y-90); ctx.lineTo(510, GROUND_Y-90); ctx.stroke();
+  ctx.fillStyle = '#FFD060'; ctx.fillRect(502, GROUND_Y-96, 20, 10);
+  // Taxi in bg
+  ctx.fillStyle = '#FFD600';
+  ctx.fillRect(340, GROUND_Y-35, 70, 28);
+  ctx.fillStyle = '#333'; ctx.fillRect(350, GROUND_Y-48, 48, 22);
+  ctx.fillStyle = '#88ccff'; ctx.fillRect(355, GROUND_Y-44, 16, 14); ctx.fillRect(375, GROUND_Y-44, 16, 14);
+  ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(355, GROUND_Y-7, 8,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(395, GROUND_Y-7, 8,0,Math.PI*2); ctx.fill();
+  // Road
+  ctx.fillStyle = '#1a1a2a'; ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y);
+  ctx.fillStyle = '#3a3a50'; ctx.fillRect(0, GROUND_Y, CANVAS_W, 3);
+  ctx.fillStyle = '#FFD600';
+  for (let x=0; x<CANVAS_W; x+=60) { ctx.fillRect(x, GROUND_Y+12, 30, 4); }
+  ctx.save(); ctx.font = 'bold 11px Heebo, Arial'; ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.textAlign = 'right'; ctx.fillText('🛣️ בדרך לנתב"ג', CANVAS_W - 8, 18); ctx.restore();
+}
+
+function drawBgAirport(ctx) {
+  // Daytime airport terminal
+  const grad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+  grad.addColorStop(0, '#1a3a6a'); grad.addColorStop(1, '#2a5a9a');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, CANVAS_W, GROUND_Y);
+  // Clouds
+  function cloud(x, y, s) {
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath(); ctx.arc(x, y, s*1.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+s*1.3, y+s*0.3, s, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+s*2.4, y, s*0.9, 0, Math.PI*2); ctx.fill();
+  }
+  cloud(60, 35, 14); cloud(300, 20, 12); cloud(460, 40, 10);
+  // Terminal building
+  ctx.fillStyle = '#ccd8e8';
+  ctx.fillRect(50, GROUND_Y-100, 200, 100);
+  // Windows
+  ctx.fillStyle = '#88aacc';
+  for (let col=0; col<5; col++) for (let row=0; row<2; row++) {
+    ctx.fillRect(65+col*36, GROUND_Y-88+row*36, 22, 22);
+  }
+  // Terminal sign
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Arial'; ctx.textAlign='center';
+  ctx.fillText('BEN GURION', 150, GROUND_Y-108);
+  // Plane on tarmac background
+  ctx.fillStyle = '#e8e8e8';
+  ctx.fillRect(380, GROUND_Y-50, 120, 30);
+  ctx.fillStyle = '#ddd';
+  ctx.beginPath(); ctx.moveTo(380,GROUND_Y-50); ctx.lineTo(460,GROUND_Y-70); ctx.lineTo(500,GROUND_Y-50); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#00aaff';
+  ctx.fillRect(415, GROUND_Y-60, 40, 12);
+  // Tarmac ground
+  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H-GROUND_Y);
+  ctx.fillStyle = '#555'; ctx.fillRect(0, GROUND_Y, CANVAS_W, 3);
+  ctx.fillStyle = '#FFD600';
+  for (let x=0; x<CANVAS_W; x+=80) { ctx.fillRect(x, GROUND_Y+10, 40, 3); }
+  ctx.save(); ctx.font = 'bold 11px Heebo, Arial'; ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.textAlign = 'right'; ctx.fillText('✈️ נתב"ג — בן גוריון', CANVAS_W-8, 18); ctx.restore();
+}
+
+function drawBgPlane(ctx) {
+  // Interior of plane, window view of clouds
+  ctx.fillStyle = '#1a2a3a'; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  // Plane window view
+  for (let i=0; i<4; i++) {
+    const wx = 60 + i*130;
+    ctx.fillStyle = '#1a5aa0';
+    roundRect(ctx, wx, 15, 55, 70, 14); ctx.fill();
+    // Sky outside
+    const wGrad = ctx.createLinearGradient(wx, 15, wx, 85);
+    wGrad.addColorStop(0,'#1a88dd'); wGrad.addColorStop(1,'#88ccff');
+    ctx.fillStyle = wGrad;
+    roundRect(ctx, wx+3, 18, 49, 64, 11); ctx.fill();
+    // Cloud in window
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath(); ctx.arc(wx+18, 58, 10, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(wx+30, 52, 13, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(wx+42, 58, 9, 0, Math.PI*2); ctx.fill();
+    // Window frame
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 3;
+    roundRect(ctx, wx, 15, 55, 70, 14); ctx.stroke();
+  }
+  // Overhead compartment
+  ctx.fillStyle = '#2a3a4a'; ctx.fillRect(0, 0, CANVAS_W, 14);
+  // Seat row bg
+  ctx.fillStyle = '#243040'; ctx.fillRect(0, GROUND_Y-20, CANVAS_W, 20);
+  // Aisle floor
+  ctx.fillStyle = '#2a2a3a'; ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H-GROUND_Y);
+  ctx.fillStyle = '#3a3a4a'; ctx.fillRect(0, GROUND_Y, CANVAS_W, 3);
+  ctx.save(); ctx.font = 'bold 11px Heebo, Arial'; ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.textAlign = 'right'; ctx.fillText('🛫 במטוס — מעל הים', CANVAS_W-8, CANVAS_H-8); ctx.restore();
+}
+
+function drawBgSantorini(ctx) {
+  // Santorini sunset — blue domes, white buildings, aegean sea
+  const grad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+  grad.addColorStop(0,'#ff6a00'); grad.addColorStop(0.4,'#ee0979'); grad.addColorStop(0.8,'#4a0080'); grad.addColorStop(1,'#1a0050');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, CANVAS_W, GROUND_Y);
+  // Sun setting on horizon
+  ctx.save(); ctx.globalAlpha = 0.9;
+  ctx.fillStyle = '#FFD600';
+  ctx.beginPath(); ctx.arc(300, GROUND_Y, 45, Math.PI, 0); ctx.fill();
+  ctx.globalAlpha = 0.3; ctx.fillStyle='#FF6B00';
+  ctx.beginPath(); ctx.arc(300, GROUND_Y, 80, Math.PI, 0); ctx.fill();
+  ctx.restore();
+  // Sea reflection shimmer
+  ctx.save(); ctx.globalAlpha = 0.25;
+  for (let x=200; x<400; x+=15) {
+    ctx.fillStyle = '#FFD600';
+    ctx.fillRect(x, GROUND_Y-8, 8, 3);
+  }
+  ctx.restore();
+  // White buildings (iconic Santorini)
+  function santBuilding(x, bw, bh) {
+    ctx.fillStyle = '#f0ece4';
+    ctx.fillRect(x, GROUND_Y-bh, bw, bh);
+    // Blue dome
+    ctx.fillStyle = '#1a6aaa';
+    ctx.beginPath(); ctx.arc(x+bw/2, GROUND_Y-bh, bw*0.5, Math.PI, 0); ctx.fill();
+    // Window
+    ctx.fillStyle = '#88aadd';
+    ctx.beginPath(); ctx.arc(x+bw/2, GROUND_Y-bh+18, 6, 0, Math.PI*2); ctx.fill();
+  }
+  santBuilding(30, 50, 65);
+  santBuilding(95, 40, 50);
+  santBuilding(460, 55, 70);
+  santBuilding(525, 38, 48);
+  // Party banner on building
+  ctx.fillStyle = '#FF2D7A'; ctx.font = 'bold 10px Heebo, Arial'; ctx.textAlign='center';
+  ctx.fillText('🎉 MESIGABI 🎉', 300, GROUND_Y-15);
+  // Stone ground
+  ctx.fillStyle = '#c8bca8'; ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H-GROUND_Y);
+  ctx.fillStyle = '#b8ac98'; ctx.fillRect(0, GROUND_Y, CANVAS_W, 4);
+  ctx.save(); ctx.font = 'bold 11px Heebo, Arial'; ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.textAlign = 'right'; ctx.fillText('🏝️ סנטוריני, יוון', CANVAS_W-8, 18); ctx.restore();
+}
+
+function drawFighter(ctx, f, isEnemy, round) {
+  const x = Math.round(f.x);
+  const gy = GROUND_Y - FIGHTER_H;
+  const flip = f.facing < 0;
+
+  ctx.save();
+  if (flip) {
+    ctx.translate(x + FIGHTER_W, gy);
+    ctx.scale(-1, 1);
+  } else {
+    ctx.translate(x, gy);
+  }
+
+  // Hurt flash
+  if (f.hurtFlash > 0 && f.hurtFlash % 4 < 2) {
+    ctx.globalAlpha = 0.4;
+  }
+
+  if (f.state === 'dead') ctx.globalAlpha = 0.4;
+
+  if (isEnemy) {
+    drawEnemyFighter(ctx, f, round);
+  } else {
+    drawPlayerFighter(ctx, f);
+  }
+
+  ctx.restore();
+
+  // Blocking shield effect
+  if (f.blocking && f.state !== 'dead') {
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#00D4C8';
+    ctx.beginPath();
+    ctx.arc(f.x + FIGHTER_W / 2, gy + FIGHTER_H / 2, 38, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.7;
+    ctx.strokeStyle = '#00FFFF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawPlayerFighter(ctx, f) {
+  const w = FIGHTER_W, h = FIGHTER_H;
+  const isWalk = f.state === 'walk';
+  const isPunch = f.state === 'punch';
+  const isKick = f.state === 'kick';
+  const isHurt = f.state === 'hurt';
+  const isDead = f.state === 'dead';
+  const isBlock = f.blocking;
+  const t = Date.now() / 200;
+
+  // Legs
+  const legSwing = isWalk ? Math.sin(t * 3) * 8 : 0;
+  // Left leg (always visible)
+  ctx.fillStyle = '#e0e0e0';
+  ctx.fillRect(4, h * 0.55, 14, h * 0.42);
+  ctx.fillStyle = '#f5f5f5';
+  ctx.fillRect(4 + legSwing, h * 0.55, 14, h * 0.42);
+  // Right leg (always visible)
+  ctx.fillStyle = '#e0e0e0';
+  ctx.fillRect(22, h * 0.55, 14, h * 0.42);
+  ctx.fillStyle = '#f5f5f5';
+  ctx.fillRect(22 - legSwing, h * 0.55, 14, h * 0.42);
+
+  // Extra kick leg extends forward (in addition to standing legs)
+  if (isKick) {
+    const progress = 1 - f.stateTimer / 22;
+    const kickAngle = Math.sin(progress * Math.PI) * 55; // degrees
+    ctx.save();
+    ctx.translate(w * 0.6, h * 0.58);
+    ctx.rotate(-kickAngle * Math.PI / 180);
+    // Upper leg
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(0, -6, 24, 11);
+    // Foot/shoe
+    ctx.fillStyle = '#333';
+    ctx.fillRect(20, -7, 14, 9);
+    ctx.restore();
+  }
+
+  // Gi body
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(6, h * 0.3, w - 12, h * 0.28);
+
+  // Purple belt
+  ctx.fillStyle = '#7C3AED';
+  ctx.fillRect(4, h * 0.55, w - 8, 7);
+
+  // Punch arm
+  if (isPunch) {
+    const ext = Math.sin((18 - f.stateTimer) / 18 * Math.PI) * 22;
+    ctx.fillStyle = '#f5c5a3';
+    ctx.fillRect(w - 8 + ext, h * 0.35, 16, 10);
+    ctx.fillStyle = '#FFD600';
+    ctx.beginPath();
+    ctx.arc(w - 2 + ext, h * 0.4, 7, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // Normal arms
+    const armSwing = isWalk ? Math.sin(t * 3) * 5 : 0;
+    ctx.fillStyle = '#f5c5a3';
+    ctx.fillRect(0, h * 0.33 + armSwing, 9, 10);
+    ctx.fillRect(w - 9, h * 0.33 - armSwing, 9, 10);
+  }
+
+  // Head
+  ctx.fillStyle = '#f5c5a3';
+  ctx.beginPath();
+  ctx.ellipse(w / 2, h * 0.17, 14, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Hair
+  ctx.fillStyle = '#3a2010';
+  ctx.fillRect(w / 2 - 12, h * 0.03, 24, 8);
+  ctx.beginPath();
+  ctx.arc(w / 2, h * 0.08, 12, Math.PI, 0);
+  ctx.fill();
+
+  // Eyes
+  if (!isHurt && !isDead) {
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(w / 2 - 5, h * 0.16, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(w / 2 + 5, h * 0.16, 2.5, 0, Math.PI * 2); ctx.fill();
+    // Determined eyebrows
+    ctx.strokeStyle = '#3a2010'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(w / 2 - 8, h * 0.12); ctx.lineTo(w / 2 - 2, h * 0.115); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w / 2 + 2, h * 0.115); ctx.lineTo(w / 2 + 8, h * 0.12); ctx.stroke();
+  } else {
+    // X eyes when hurt/dead
+    ctx.strokeStyle = '#FF2D7A'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(w/2-8, h*0.13); ctx.lineTo(w/2-3, h*0.19); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w/2-3, h*0.13); ctx.lineTo(w/2-8, h*0.19); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w/2+3, h*0.13); ctx.lineTo(w/2+8, h*0.19); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w/2+8, h*0.13); ctx.lineTo(w/2+3, h*0.19); ctx.stroke();
+  }
+
+  // "גבי" label
+  ctx.font = 'bold 9px Heebo, Arial';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FFD600';
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.strokeText('גבי', w / 2, h + 12);
+  ctx.fillText('גבי', w / 2, h + 12);
+}
+
+function drawEnemyFighter(ctx, f, round) {
+  const w = FIGHTER_W, h = FIGHTER_H;
+  const opp = f.opp;
+  const isWalk = f.state === 'walk';
+  const isPunch = f.state === 'punch';
+  const isKick = f.state === 'kick';
+  const isHurt = f.state === 'hurt';
+  const isDead = f.state === 'dead';
+  const t = Date.now() / 200;
+  const col = opp.color;
+
+  // Legs
+  const legSwing = isWalk ? Math.sin(t * 3) * 8 : 0;
+  ctx.fillStyle = col;
+  ctx.globalAlpha = ctx.globalAlpha * 0.85;
+  ctx.fillRect(4 + legSwing, h * 0.55, 14, h * 0.42);
+  ctx.fillRect(22 - legSwing, h * 0.55, 14, h * 0.42);
+  ctx.globalAlpha = 1;
+  if (isHurt || isDead) ctx.globalAlpha = 0.4;
+
+  if (isKick) {
+    ctx.fillStyle = col;
+    ctx.save();
+    ctx.translate(36, h * 0.65);
+    ctx.rotate(-Math.sin((22 - f.stateTimer) / 22 * Math.PI) * 0.7);
+    ctx.fillRect(0, 0, 22, 10);
+    ctx.restore();
+  }
+
+  // Body
+  ctx.fillStyle = col;
+  ctx.fillRect(6, h * 0.3, w - 12, h * 0.28);
+  // Dark belt
+  ctx.fillStyle = '#000';
+  ctx.fillRect(4, h * 0.555, w - 8, 6);
+
+  // Punch arm
+  if (isPunch) {
+    const ext = Math.sin((18 - f.stateTimer) / 18 * Math.PI) * 22;
+    ctx.fillStyle = col;
+    ctx.fillRect(w - 8 + ext, h * 0.35, 18, 10);
+  } else {
+    const armSwing = isWalk ? Math.sin(t * 3) * 5 : 0;
+    ctx.fillStyle = col;
+    ctx.fillRect(0, h * 0.33 + armSwing, 9, 10);
+    ctx.fillRect(w - 9, h * 0.33 - armSwing, 9, 10);
+  }
+
+  // Head - big duck/animal head
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.ellipse(w / 2, h * 0.16, 17, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Duck bill / animal feature per round
+  if (round === 0 || round === 1) {
+    // Duck bill
+    ctx.fillStyle = '#FF6B00';
+    ctx.beginPath();
+    ctx.ellipse(w / 2 + 14, h * 0.18, 8, 5, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (round === 2) {
+    // Frog wide mouth
+    ctx.strokeStyle = '#006644';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(w / 2, h * 0.22, 10, 0, Math.PI);
+    ctx.stroke();
+  } else if (round === 3) {
+    // Flamingo beak
+    ctx.fillStyle = '#FF88CC';
+    ctx.beginPath();
+    ctx.moveTo(w / 2 + 14, h * 0.16);
+    ctx.lineTo(w / 2 + 22, h * 0.2);
+    ctx.lineTo(w / 2 + 14, h * 0.22);
+    ctx.fill();
+  } else if (round === 4) {
+    // Lion mane
+    ctx.fillStyle = '#FF6B00';
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.ellipse(w / 2 + Math.cos(angle) * 20, h * 0.16 + Math.sin(angle) * 20, 6, 4, angle, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.ellipse(w / 2, h * 0.16, 15, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Eyes
+  if (!isHurt && !isDead) {
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(w / 2 - 6, h * 0.14, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(w / 2 + 6, h * 0.14, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(w / 2 - 5, h * 0.13, 1.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(w / 2 + 7, h * 0.13, 1.2, 0, Math.PI * 2); ctx.fill();
+    // Mean eyebrows
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(w/2-10, h*0.09); ctx.lineTo(w/2-2, h*0.11); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w/2+10, h*0.09); ctx.lineTo(w/2+2, h*0.11); ctx.stroke();
+  } else {
+    ctx.strokeStyle = '#FF2D7A'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(w/2-9, h*0.1); ctx.lineTo(w/2-3, h*0.17); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w/2-3, h*0.1); ctx.lineTo(w/2-9, h*0.17); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w/2+3, h*0.1); ctx.lineTo(w/2+9, h*0.17); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w/2+9, h*0.1); ctx.lineTo(w/2+3, h*0.17); ctx.stroke();
+  }
+
+  // Name label
+  ctx.font = 'bold 8px Heebo, Arial';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = opp.color;
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.strokeText(opp.emoji, w / 2, h + 12);
+  ctx.fillText(opp.emoji, w / 2, h + 12);
+}
+
+// Keyboard controls
+function karateKeyDown(code) {
+  gKeys[code] = true;
+}
+function karateKeyUp(code) {
+  gKeys[code] = false;
+}
+window.karateKeyDown = karateKeyDown;
+window.karateKeyUp = karateKeyUp;
+
+document.addEventListener('keydown', e => {
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyZ','KeyX','KeyA'].includes(e.code)) {
+    gKeys[e.code] = true;
+    // Prevent page scroll on arrows
+    if (gGameStarted) e.preventDefault();
+  }
+});
+document.addEventListener('keyup', e => {
+  gKeys[e.code] = false;
+});
+
+// Init story screen on load
+document.addEventListener('DOMContentLoaded', () => {
+  showStory(STORY_SCREENS[0]);
+});
+// Also run now in case DOM is already ready
+if (document.readyState !== 'loading') showStory(STORY_SCREENS[0]);
+
+window.addEventListener('resize', () => {
+  if (gGameStarted) resizeCanvas();
+});
+
+})();
 
 // ========== EXCUSE GENERATOR ==========
 const EXCUSES = [
