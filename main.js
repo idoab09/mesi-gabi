@@ -2678,93 +2678,137 @@ function generateOutfit() {
     let anchors = det ? getFaceAnchors(det, W) : null;
     const fx = anchors ? anchors.eyeMid.x : W * 0.5;
     const fy = anchors ? anchors.eyeMid.y : H * 0.32;
-    const fs = anchors ? anchors.eyeDist * 2.2 : Math.min(W, H) * 0.28;
+    // eyeDist = pixel distance between eyes. fs = face-scale unit
+    const fs = anchors ? anchors.eyeDist : Math.min(W, H) * 0.13;
     const angle = anchors ? anchors.faceAngle : 0;
 
     if (id === 'duck') {
       ctx.save();
       ctx.translate(fx, fy); ctx.rotate(angle);
-      // Bill on nose
-      const bmy = anchors ? (anchors.mouth.y - anchors.eyeMid.y) * 0.5 : fs * 0.4;
+      // Bill: positioned below eyes toward nose (positive y = downward)
+      const noseOff = anchors ? (anchors.nose.y - anchors.eyeMid.y) : fs * 0.8;
       ctx.fillStyle = '#FF8C00'; ctx.strokeStyle = '#cc6600'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.ellipse(0, bmy, fs*0.38, fs*0.17, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      // Upper bill
+      ctx.beginPath(); ctx.ellipse(0, noseOff, fs*0.7, fs*0.28, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      // Lower bill
       ctx.fillStyle = '#e07800';
-      ctx.beginPath(); ctx.ellipse(0, bmy + fs*0.1, fs*0.3, fs*0.08, 0, 0, Math.PI); ctx.fill();
-      // Yellow feathers on forehead
+      ctx.beginPath(); ctx.ellipse(0, noseOff + fs*0.14, fs*0.55, fs*0.14, 0, 0, Math.PI); ctx.fill();
+      // Yellow feathers on forehead (negative y = upward)
+      const featherOff = anchors ? (anchors.eyeMid.y - anchors.foreHead.y) : fs * 1.0;
       ctx.fillStyle = '#FFD600';
       for (let i = -2; i <= 2; i++) {
         ctx.beginPath();
-        ctx.ellipse(i * fs*0.14, -fs*0.7, fs*0.07, fs*0.2, i*0.25, 0, Math.PI*2);
+        ctx.ellipse(i * fs*0.24, -featherOff * 0.8 - fs*0.05, fs*0.11, fs*0.32, i*0.2, 0, Math.PI*2);
         ctx.fill();
       }
       ctx.restore();
 
     } else if (id === 'hat') {
       ctx.save();
-      // Place hat above forehead
-      const hBase = anchors ? anchors.foreHead.y : fy - fs*0.5;
-      ctx.translate(fx, hBase); ctx.rotate(angle);
-      const hw = fs*0.75, hh = fs*1.1;
-      const grad = ctx.createLinearGradient(-hw/2, 0, hw/2, -hh);
+      // Hat brim sits just above the forehead
+      const foreheadY = anchors ? anchors.foreHead.y : fy - fs * 1.5;
+      const hw = fs * 1.3;   // half-width of brim
+      const hh = fs * 2.0;   // height of cone
+      ctx.translate(fx, foreheadY); ctx.rotate(angle);
+      // Cone: base at y=0 (brim level), tip at y=-hh (above)
+      const grad = ctx.createLinearGradient(0, 0, 0, -hh);
       grad.addColorStop(0,'#FF2D7A'); grad.addColorStop(0.5,'#7C3AED'); grad.addColorStop(1,'#FFD600');
       ctx.fillStyle = grad;
-      ctx.beginPath(); ctx.moveTo(-hw/2,0); ctx.lineTo(hw/2,0); ctx.lineTo(0,-hh); ctx.closePath(); ctx.fill();
-      // Stripes
-      ctx.save(); ctx.globalAlpha=0.35; ctx.strokeStyle='#fff'; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.moveTo(-hw*0.25,-hh*0.3); ctx.lineTo(hw*0.1,-hh*0.3); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(-hw*0.12,-hh*0.62); ctx.lineTo(hw*0.05,-hh*0.62); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-hw*0.55, 0); ctx.lineTo(hw*0.55, 0); ctx.lineTo(0, -hh); ctx.closePath(); ctx.fill();
+      // Stripe decorations on cone
+      ctx.save(); ctx.globalAlpha = 0.4; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-hw*0.28, -hh*0.28); ctx.lineTo(hw*0.18, -hh*0.28); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-hw*0.14, -hh*0.58); ctx.lineTo(hw*0.09, -hh*0.58); ctx.stroke();
       ctx.restore();
-      // Brim
-      ctx.fillStyle='#FFD600'; ctx.beginPath(); ctx.ellipse(0,0,hw/2+10,11,0,0,Math.PI*2); ctx.fill();
-      // Pom
-      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,-hh,fs*0.09,0,Math.PI*2); ctx.fill();
+      // Brim ellipse
+      ctx.fillStyle = '#FFD600';
+      ctx.beginPath(); ctx.ellipse(0, 0, hw*0.65, hw*0.18, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#cc9900'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0, 0, hw*0.65, hw*0.18, 0, 0, Math.PI*2); ctx.stroke();
+      // Pom on tip
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(0, -hh, fs*0.15, 0, Math.PI*2); ctx.fill();
+      // Elastic string
+      ctx.strokeStyle = 'rgba(200,200,200,0.7)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-hw*0.55, 0); ctx.lineTo(-fs*1.0, fs*0.6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(hw*0.55, 0); ctx.lineTo(fs*1.0, fs*0.6); ctx.stroke();
       ctx.restore();
 
     } else if (id === 'shades') {
       ctx.save();
       ctx.translate(fx, fy); ctx.rotate(angle);
-      const eyeOff = anchors ? anchors.eyeDist * 0.5 : fs*0.28;
-      const lensW = eyeOff * 0.85, lensH = lensW * 0.65;
-      // Bridge
-      ctx.strokeStyle='#111'; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.moveTo(-eyeOff+lensW*0.8,0); ctx.lineTo(eyeOff-lensW*0.8,0); ctx.stroke();
-      // Lenses
-      [[-eyeOff,-0.12],[eyeOff,0.12]].forEach(([lx,tilt],idx) => {
-        const gr = ctx.createRadialGradient(lx,0,2,lx,0,lensW);
-        gr.addColorStop(0,'rgba(80,0,140,0.88)'); gr.addColorStop(1,'rgba(10,0,40,0.95)');
-        ctx.fillStyle=gr; ctx.strokeStyle='#111'; ctx.lineWidth=2.5;
-        ctx.beginPath(); ctx.ellipse(lx,0,lensW,lensH,tilt,0,Math.PI*2); ctx.fill(); ctx.stroke();
-        // Shine
-        ctx.fillStyle='rgba(255,255,255,0.2)';
-        ctx.beginPath(); ctx.ellipse(lx-lensW*0.2,-lensH*0.25,lensW*0.28,lensH*0.22,-0.3,0,Math.PI*2); ctx.fill();
+      // eyeOff = half-distance between lens centers
+      const eyeOff = anchors ? anchors.eyeDist * 0.5 : fs * 1.1;
+      const lensW = fs * 0.72, lensH = fs * 0.48;
+      const frameColor = '#111';
+      const frameWidth = Math.max(2, fs * 0.06);
+
+      // Frame outline for each lens (thick rounded rect feel via arc-rect)
+      [[-eyeOff, anchors ? (anchors.leftEye.y - anchors.eyeMid.y) : 0],
+       [ eyeOff, anchors ? (anchors.rightEye.y - anchors.eyeMid.y) : 0]
+      ].forEach(([lx, dy]) => {
+        // Lens gradient fill
+        const gr = ctx.createRadialGradient(lx, dy, 2, lx, dy, lensW);
+        gr.addColorStop(0, 'rgba(90,0,160,0.85)');
+        gr.addColorStop(0.7, 'rgba(30,0,80,0.92)');
+        gr.addColorStop(1, 'rgba(5,0,20,0.97)');
+        ctx.fillStyle = gr;
+        ctx.beginPath(); ctx.ellipse(lx, dy, lensW, lensH, 0, 0, Math.PI*2); ctx.fill();
+        // Frame border
+        ctx.strokeStyle = frameColor; ctx.lineWidth = frameWidth;
+        ctx.beginPath(); ctx.ellipse(lx, dy, lensW, lensH, 0, 0, Math.PI*2); ctx.stroke();
+        // Shine highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        ctx.beginPath(); ctx.ellipse(lx - lensW*0.25, dy - lensH*0.28, lensW*0.32, lensH*0.24, -0.3, 0, Math.PI*2); ctx.fill();
       });
-      // Arms
-      ctx.strokeStyle='#111'; ctx.lineWidth=2.5;
-      ctx.beginPath(); ctx.moveTo(-eyeOff-lensW,-2); ctx.lineTo(-eyeOff-lensW-fs*0.32,-5); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(eyeOff+lensW,-2);  ctx.lineTo(eyeOff+lensW+fs*0.32,-5);  ctx.stroke();
+
+      // Bridge connecting lenses
+      ctx.strokeStyle = frameColor; ctx.lineWidth = frameWidth;
+      const bridgeY = anchors ? (anchors.leftEye.y + anchors.rightEye.y) / 2 - anchors.eyeMid.y : 0;
+      ctx.beginPath();
+      ctx.moveTo(-eyeOff + lensW, bridgeY);
+      ctx.bezierCurveTo(-eyeOff*0.3, bridgeY - lensH*0.4, eyeOff*0.3, bridgeY - lensH*0.4, eyeOff - lensW, bridgeY);
+      ctx.stroke();
+
+      // Temple arms extending outward
+      ctx.strokeStyle = frameColor; ctx.lineWidth = frameWidth * 0.8;
+      const leftDy  = anchors ? (anchors.leftEye.y  - anchors.eyeMid.y) : 0;
+      const rightDy = anchors ? (anchors.rightEye.y - anchors.eyeMid.y) : 0;
+      ctx.beginPath(); ctx.moveTo(-eyeOff - lensW, leftDy);  ctx.lineTo(-eyeOff - lensW - fs*0.7, leftDy  + fs*0.05); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo( eyeOff + lensW, rightDy); ctx.lineTo( eyeOff + lensW + fs*0.7, rightDy + fs*0.05); ctx.stroke();
       ctx.restore();
 
     } else if (id === 'gi') {
       ctx.save();
-      const shoulderY = anchors ? anchors.jawBot.y + fs*0.25 : fy + fs*0.85;
-      ctx.translate(fx, shoulderY); ctx.rotate(angle);
-      const gw = fs*1.7;
-      ctx.fillStyle='rgba(240,240,240,0.9)';
+      // Anchor at shoulder level — just below jaw
+      const shoulderY = anchors ? anchors.jawBot.y + fs * 0.5 : fy + fs * 2.5;
+      const gw = fs * 3.2; // gi width relative to face
+      ctx.translate(fx, shoulderY);
+      // Gi body — fills from shoulder down
+      ctx.fillStyle = 'rgba(240,240,240,0.92)';
       ctx.beginPath();
-      ctx.moveTo(-gw/2, H); ctx.lineTo(-gw/2,0);
-      ctx.lineTo(-fs*0.12,-fs*0.08); ctx.lineTo(0,fs*0.28);
-      ctx.lineTo(fs*0.12,-fs*0.08); ctx.lineTo(gw/2,0);
-      ctx.lineTo(gw/2,H); ctx.closePath(); ctx.fill();
-      // Belt
-      ctx.fillStyle='rgba(124,58,237,0.92)';
-      ctx.fillRect(-gw/2, fs*0.55, gw, fs*0.12);
-      ctx.fillRect(-fs*0.13, fs*0.5, fs*0.26, fs*0.22);
-      ctx.fillRect(-fs*0.26,fs*0.72,fs*0.11,fs*0.42);
-      ctx.fillRect(fs*0.15,fs*0.72,fs*0.11,fs*0.42);
-      // Lapels
-      ctx.strokeStyle='rgba(180,180,180,0.6)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(0,fs*0.28); ctx.lineTo(-fs*0.42,fs*0.82); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0,fs*0.28); ctx.lineTo(fs*0.42,fs*0.82);  ctx.stroke();
+      ctx.moveTo(-gw/2, 0); ctx.lineTo(-gw/2, H);
+      ctx.lineTo(gw/2, H); ctx.lineTo(gw/2, 0);
+      // V-neck collar
+      ctx.lineTo(fs*0.22, 0);
+      ctx.lineTo(0, fs*0.55);
+      ctx.lineTo(-fs*0.22, 0);
+      ctx.closePath(); ctx.fill();
+      // Purple belt
+      const beltY = fs * 1.0, beltH = fs * 0.22;
+      ctx.fillStyle = 'rgba(124,58,237,0.95)';
+      ctx.fillRect(-gw/2, beltY, gw, beltH);
+      // Belt knot
+      ctx.fillStyle = 'rgba(90,30,200,0.95)';
+      ctx.fillRect(-fs*0.22, beltY - fs*0.05, fs*0.44, beltH + fs*0.1);
+      // Belt tails
+      ctx.fillStyle = 'rgba(124,58,237,0.95)';
+      ctx.fillRect(-fs*0.38, beltY + beltH, fs*0.16, fs*0.7);
+      ctx.fillRect( fs*0.22, beltY + beltH, fs*0.16, fs*0.7);
+      // Lapel seam lines
+      ctx.strokeStyle = 'rgba(160,160,160,0.7)'; ctx.lineWidth = Math.max(1.5, fs*0.04);
+      ctx.beginPath(); ctx.moveTo(0, fs*0.55); ctx.lineTo(-fs*0.7, fs*1.4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, fs*0.55); ctx.lineTo( fs*0.7, fs*1.4); ctx.stroke();
       ctx.restore();
 
     } else if (id === 'confetti') {
