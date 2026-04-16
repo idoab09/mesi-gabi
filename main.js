@@ -2516,28 +2516,68 @@ function generateOutfit() {
   let pbFilterIdx = 0;
   let pbRafId = null;
   let pbSnapped = false;
+  let pbFaceApiReady = false;
+  let pbLastDetection = null; // cached face landmarks
+  let pbDetecting = false;
+
+  const FACEAPI_CDN = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+  const MODELS_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
 
   const FILTERS = [
-    { id: 'duck',      label: '🦆 ברווז' },
-    { id: 'hat',       label: '🥳 כובע' },
-    { id: 'shades',    label: '🕶️ משקפיים' },
-    { id: 'gi',        label: '🥋 גי' },
-    { id: 'confetti',  label: '🎉 קונפטי' },
+    { id: 'duck',     label: '🦆 ברווז' },
+    { id: 'hat',      label: '🥳 כובע' },
+    { id: 'shades',   label: '🕶️ משקפיים' },
+    { id: 'gi',       label: '🥋 גי' },
+    { id: 'confetti', label: '🎉 קונפטי' },
   ];
 
-  // Deterministic confetti dots seeded per frame
   const CONFETTI_COLORS = ['#FF2D7A','#FFD600','#7C3AED','#00D4C8','#FF6B00','#A3FF00'];
   const CONFETTI_DOTS = Array.from({length: 28}, (_, i) => ({
-    x: (i * 137.5) % 100,
-    y: (i * 79.3 + 11) % 100,
-    r: 4 + (i % 4),
-    c: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    x: (i * 137.5) % 100, y: (i * 79.3 + 11) % 100,
+    r: 4 + (i % 4), c: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
     dx: ((i * 31) % 7) - 3,
   }));
 
   function getVideo()  { return document.getElementById('pb-video'); }
   function getCanvas() { return document.getElementById('pb-canvas'); }
   function getCtx()    { return getCanvas().getContext('2d'); }
+
+  // Load face-api.js + models lazily when camera opens
+  function loadFaceApi() {
+    return new Promise((resolve) => {
+      if (window.faceapi) { loadModels().then(resolve); return; }
+      const s = document.createElement('script');
+      s.src = FACEAPI_CDN;
+      s.onload = () => loadModels().then(resolve);
+      s.onerror = () => { pbFaceApiReady = false; resolve(); }; // graceful fallback
+      document.head.appendChild(s);
+    });
+  }
+
+  function loadModels() {
+    const fa = window.faceapi;
+    if (!fa) return Promise.resolve();
+    return Promise.all([
+      fa.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
+      fa.nets.faceLandmark68TinyNet.loadFromUri(MODELS_URL),
+    ]).then(() => { pbFaceApiReady = true; })
+      .catch(() => { pbFaceApiReady = false; });
+  }
+
+  // Run detection async, cache result
+  async function runDetection() {
+    if (!pbFaceApiReady || pbDetecting || pbSnapped) return;
+    const video = getVideo();
+    if (!video.videoWidth) return;
+    pbDetecting = true;
+    try {
+      const det = await window.faceapi
+        .detectSingleFace(video, new window.faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+        .withFaceLandmarks(true);
+      pbLastDetection = det || null;
+    } catch(e) { pbLastDetection = null; }
+    pbDetecting = false;
+  }
 
   function pbSetFilter(idx) {
     pbFilterIdx = idx;
@@ -2548,30 +2588,38 @@ function generateOutfit() {
 
   function pbStartCamera() {
     const btn = document.getElementById('pb-cam-btn');
+    if (!navigator.mediaDevices) {
+      showToast('המצלמה דורשת HTTPS 🔒 — פתח דרך Vercel');
+      return;
+    }
     btn.disabled = true;
-    btn.textContent = '⏳ פותח...';
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } })
-      .then(stream => {
-        pbStream = stream;
-        const video = getVideo();
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-          video.play();
-          const canvas = getCanvas();
-          canvas.width  = video.videoWidth  || 640;
-          canvas.height = video.videoHeight || 480;
-          document.getElementById('pb-snap-btn').style.display = 'inline-flex';
-          btn.style.display = 'none';
-          document.getElementById('pb-result').style.display = 'none';
-          pbSnapped = false;
-          pbRenderLoop();
-        };
-      })
-      .catch(() => {
-        btn.disabled = false;
-        btn.textContent = '📷 פתח מצלמה';
-        showToast('לא ניתן לגשת למצלמה 😢');
-      });
+    btn.textContent = '⏳ טוען...';
+    loadFaceApi().then(() => {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } })
+        .then(stream => {
+          pbStream = stream;
+          const video = getVideo();
+          video.srcObject = stream;
+          video.onloadedmetadata = () => {
+            video.play();
+            const canvas = getCanvas();
+            canvas.width  = video.videoWidth  || 640;
+            canvas.height = video.videoHeight || 480;
+            document.getElementById('pb-snap-btn').style.display = 'inline-flex';
+            btn.style.display = 'none';
+            document.getElementById('pb-result').style.display = 'none';
+            pbSnapped = false;
+            pbRenderLoop();
+            // start detection loop
+            setInterval(() => runDetection(), 80);
+          };
+        })
+        .catch(() => {
+          btn.disabled = false;
+          btn.textContent = '📷 פתח מצלמה';
+          showToast('לא ניתן לגשת למצלמה 😢');
+        });
+    });
   }
   window.pbStartCamera = pbStartCamera;
 
@@ -2594,171 +2642,147 @@ function generateOutfit() {
     ctx.restore();
 
     // Apply filter overlay
-    drawFilter(ctx, W, H, FILTERS[pbFilterIdx].id);
+    drawFilter(ctx, W, H, FILTERS[pbFilterIdx].id, pbLastDetection);
 
     pbRafId = requestAnimationFrame(pbRenderLoop);
   }
 
-  function drawFilter(ctx, W, H, id) {
-    // Face region estimate: center-upper area for selfie
-    const fx = W * 0.5;   // face center x
-    const fy = H * 0.32;  // face center y
-    const fs = Math.min(W, H) * 0.28; // face size unit
+  // Extract useful anchor points from face-api landmarks (mirrored coords)
+  function getFaceAnchors(det, W) {
+    if (!det) return null;
+    const lm = det.landmarks;
+    const pts = lm.positions;
+    // face-api positions are in original (unmirrored) video space — mirror them
+    const mx = p => ({ x: W - p.x, y: p.y });
+
+    const nose      = mx(pts[30]);
+    const leftEye   = mx(lm.getLeftEye().reduce((a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2})));
+    const rightEye  = mx(lm.getRightEye().reduce((a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2})));
+    const mouth     = mx(lm.getMouth().reduce((a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2})));
+    const jawTop    = mx(pts[0]);  // leftmost jaw
+    const jawBot    = mx(pts[8]);  // chin
+    const jawRight  = mx(pts[16]);
+
+    const eyeDist   = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
+    const faceW     = Math.hypot(jawRight.x - jawTop.x, jawRight.y - jawTop.y);
+    const faceH     = Math.hypot(jawBot.x  - mx(pts[24]).x, jawBot.y - mx(pts[24]).y);
+    const faceAngle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+    const eyeMid    = { x: (leftEye.x + rightEye.x) / 2, y: (leftEye.y + rightEye.y) / 2 };
+    const foreHead  = { x: eyeMid.x, y: eyeMid.y - eyeDist * 1.1 };
+
+    return { nose, leftEye, rightEye, mouth, eyeMid, foreHead, eyeDist, faceW, faceH, faceAngle, jawBot, jawTop };
+  }
+
+  function drawFilter(ctx, W, H, id, det) {
+    // Fallback anchors if no face detected — center of frame
+    let anchors = det ? getFaceAnchors(det, W) : null;
+    const fx = anchors ? anchors.eyeMid.x : W * 0.5;
+    const fy = anchors ? anchors.eyeMid.y : H * 0.32;
+    const fs = anchors ? anchors.eyeDist * 2.2 : Math.min(W, H) * 0.28;
+    const angle = anchors ? anchors.faceAngle : 0;
 
     if (id === 'duck') {
-      // Orange duck bill on lower face
       ctx.save();
-      ctx.fillStyle = '#FF8C00';
-      ctx.strokeStyle = '#cc6600';
-      ctx.lineWidth = 2;
-      // Upper bill
-      ctx.beginPath();
-      ctx.ellipse(fx, fy + fs * 0.55, fs * 0.38, fs * 0.18, 0, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
-      // Lower bill
+      ctx.translate(fx, fy); ctx.rotate(angle);
+      // Bill on nose
+      const bmy = anchors ? (anchors.mouth.y - anchors.eyeMid.y) * 0.5 : fs * 0.4;
+      ctx.fillStyle = '#FF8C00'; ctx.strokeStyle = '#cc6600'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0, bmy, fs*0.38, fs*0.17, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#e07800';
-      ctx.beginPath();
-      ctx.ellipse(fx, fy + fs * 0.65, fs * 0.32, fs * 0.1, 0, 0, Math.PI);
-      ctx.fill();
-      // Duck eyes (above bill)
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(fx - fs*0.22, fy + fs*0.1, fs*0.1, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(fx + fs*0.22, fy + fs*0.1, fs*0.1, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.beginPath(); ctx.arc(fx - fs*0.2,  fy + fs*0.1, fs*0.05, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(fx + fs*0.2,  fy + fs*0.1, fs*0.05, 0, Math.PI*2); ctx.fill();
-      // Yellow duck head feathers
+      ctx.beginPath(); ctx.ellipse(0, bmy + fs*0.1, fs*0.3, fs*0.08, 0, 0, Math.PI); ctx.fill();
+      // Yellow feathers on forehead
       ctx.fillStyle = '#FFD600';
       for (let i = -2; i <= 2; i++) {
         ctx.beginPath();
-        ctx.ellipse(fx + i * fs*0.12, fy - fs*0.55, fs*0.08, fs*0.18, i*0.3, 0, Math.PI*2);
+        ctx.ellipse(i * fs*0.14, -fs*0.7, fs*0.07, fs*0.2, i*0.25, 0, Math.PI*2);
         ctx.fill();
       }
       ctx.restore();
 
     } else if (id === 'hat') {
-      // Party hat on top of head
       ctx.save();
-      const hx = fx, hy = fy - fs * 0.52;
-      const hw = fs * 0.7, hh = fs * 1.0;
-      // Hat cone
-      const grad = ctx.createLinearGradient(hx - hw/2, hy, hx + hw/2, hy - hh);
-      grad.addColorStop(0, '#FF2D7A'); grad.addColorStop(0.5, '#7C3AED'); grad.addColorStop(1, '#FFD600');
+      // Place hat above forehead
+      const hBase = anchors ? anchors.foreHead.y : fy - fs*0.5;
+      ctx.translate(fx, hBase); ctx.rotate(angle);
+      const hw = fs*0.75, hh = fs*1.1;
+      const grad = ctx.createLinearGradient(-hw/2, 0, hw/2, -hh);
+      grad.addColorStop(0,'#FF2D7A'); grad.addColorStop(0.5,'#7C3AED'); grad.addColorStop(1,'#FFD600');
       ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(hx - hw/2, hy);
-      ctx.lineTo(hx + hw/2, hy);
-      ctx.lineTo(hx, hy - hh);
-      ctx.closePath(); ctx.fill();
-      // Stripe
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.globalAlpha = 0.4;
-      ctx.beginPath(); ctx.moveTo(hx - hw*0.3, hy - hh*0.3); ctx.lineTo(hx + hw*0.1, hy - hh*0.3); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(hx - hw*0.15, hy - hh*0.6); ctx.lineTo(hx + hw*0.05, hy - hh*0.6); ctx.stroke();
-      ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.moveTo(-hw/2,0); ctx.lineTo(hw/2,0); ctx.lineTo(0,-hh); ctx.closePath(); ctx.fill();
+      // Stripes
+      ctx.save(); ctx.globalAlpha=0.35; ctx.strokeStyle='#fff'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(-hw*0.25,-hh*0.3); ctx.lineTo(hw*0.1,-hh*0.3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-hw*0.12,-hh*0.62); ctx.lineTo(hw*0.05,-hh*0.62); ctx.stroke();
+      ctx.restore();
       // Brim
-      ctx.fillStyle = '#FFD600';
-      ctx.beginPath(); ctx.ellipse(hx, hy, hw/2 + 8, 10, 0, 0, Math.PI*2); ctx.fill();
-      // Pom-pom
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(hx, hy - hh, fs*0.1, 0, Math.PI*2); ctx.fill();
-      // Elastic string
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(hx - hw/2, hy);
-      ctx.quadraticCurveTo(hx - hw*0.8, hy + fs*0.4, fx - fs*0.42, fy + fs*0.5);
-      ctx.stroke();
+      ctx.fillStyle='#FFD600'; ctx.beginPath(); ctx.ellipse(0,0,hw/2+10,11,0,0,Math.PI*2); ctx.fill();
+      // Pom
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,-hh,fs*0.09,0,Math.PI*2); ctx.fill();
       ctx.restore();
 
     } else if (id === 'shades') {
-      // Sunglasses
       ctx.save();
-      const sy = fy + fs * 0.02;
-      const lx = fx - fs * 0.25, rx = fx + fs * 0.25;
-      const lensW = fs * 0.28, lensH = fs * 0.2;
-      // Frame bar
-      ctx.strokeStyle = '#111'; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(lx + lensW*0.9, sy); ctx.lineTo(rx - lensW*0.9, sy); ctx.stroke();
-      // Left lens
-      const lgr = ctx.createRadialGradient(lx, sy, 2, lx, sy, lensW);
-      lgr.addColorStop(0, 'rgba(80,0,120,0.85)'); lgr.addColorStop(1, 'rgba(20,0,50,0.95)');
-      ctx.fillStyle = lgr;
-      ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.ellipse(lx, sy, lensW, lensH, -0.15, 0, Math.PI*2);
-      ctx.fill(); ctx.stroke();
-      // Right lens
-      const rgr = ctx.createRadialGradient(rx, sy, 2, rx, sy, lensW);
-      rgr.addColorStop(0, 'rgba(80,0,120,0.85)'); rgr.addColorStop(1, 'rgba(20,0,50,0.95)');
-      ctx.fillStyle = rgr;
-      ctx.beginPath(); ctx.ellipse(rx, sy, lensW, lensH, 0.15, 0, Math.PI*2);
-      ctx.fill(); ctx.stroke();
-      // Shine
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
-      ctx.beginPath(); ctx.ellipse(lx - lensW*0.2, sy - lensH*0.2, lensW*0.3, lensH*0.2, -0.3, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(rx - lensW*0.1, sy - lensH*0.2, lensW*0.3, lensH*0.2, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.translate(fx, fy); ctx.rotate(angle);
+      const eyeOff = anchors ? anchors.eyeDist * 0.5 : fs*0.28;
+      const lensW = eyeOff * 0.85, lensH = lensW * 0.65;
+      // Bridge
+      ctx.strokeStyle='#111'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(-eyeOff+lensW*0.8,0); ctx.lineTo(eyeOff-lensW*0.8,0); ctx.stroke();
+      // Lenses
+      [[-eyeOff,-0.12],[eyeOff,0.12]].forEach(([lx,tilt],idx) => {
+        const gr = ctx.createRadialGradient(lx,0,2,lx,0,lensW);
+        gr.addColorStop(0,'rgba(80,0,140,0.88)'); gr.addColorStop(1,'rgba(10,0,40,0.95)');
+        ctx.fillStyle=gr; ctx.strokeStyle='#111'; ctx.lineWidth=2.5;
+        ctx.beginPath(); ctx.ellipse(lx,0,lensW,lensH,tilt,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        // Shine
+        ctx.fillStyle='rgba(255,255,255,0.2)';
+        ctx.beginPath(); ctx.ellipse(lx-lensW*0.2,-lensH*0.25,lensW*0.28,lensH*0.22,-0.3,0,Math.PI*2); ctx.fill();
+      });
       // Arms
-      ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(lx - lensW, sy); ctx.lineTo(lx - lensW - fs*0.28, sy - fs*0.05); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(rx + lensW, sy); ctx.lineTo(rx + lensW + fs*0.28, sy - fs*0.05); ctx.stroke();
+      ctx.strokeStyle='#111'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(-eyeOff-lensW,-2); ctx.lineTo(-eyeOff-lensW-fs*0.32,-5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(eyeOff+lensW,-2);  ctx.lineTo(eyeOff+lensW+fs*0.32,-5);  ctx.stroke();
       ctx.restore();
 
     } else if (id === 'gi') {
-      // White karate gi collar overlay on shoulders
       ctx.save();
-      const gy2 = fy + fs * 0.85;
-      const gw = fs * 1.6;
-      // Gi body
-      ctx.fillStyle = 'rgba(240,240,240,0.88)';
+      const shoulderY = anchors ? anchors.jawBot.y + fs*0.25 : fy + fs*0.85;
+      ctx.translate(fx, shoulderY); ctx.rotate(angle);
+      const gw = fs*1.7;
+      ctx.fillStyle='rgba(240,240,240,0.9)';
       ctx.beginPath();
-      ctx.moveTo(fx - gw/2, H);
-      ctx.lineTo(fx - gw/2, gy2);
-      ctx.lineTo(fx - fs*0.15, gy2 - fs*0.1);
-      ctx.lineTo(fx, gy2 + fs*0.25);
-      ctx.lineTo(fx + fs*0.15, gy2 - fs*0.1);
-      ctx.lineTo(fx + gw/2, gy2);
-      ctx.lineTo(fx + gw/2, H);
-      ctx.closePath(); ctx.fill();
-      // Purple belt
-      ctx.fillStyle = 'rgba(124,58,237,0.9)';
-      ctx.fillRect(fx - gw/2, gy2 + fs*0.55, gw, fs*0.13);
-      // Belt knot
-      ctx.fillStyle = '#7C3AED';
-      ctx.beginPath(); ctx.roundRect
-        ? (ctx.roundRect(fx - fs*0.12, gy2 + fs*0.5, fs*0.24, fs*0.22, 4), ctx.fill())
-        : (ctx.fillRect(fx - fs*0.12, gy2 + fs*0.5, fs*0.24, fs*0.22));
-      // Belt tails
-      ctx.fillStyle = 'rgba(124,58,237,0.85)';
-      ctx.fillRect(fx - fs*0.25, gy2 + fs*0.72, fs*0.1, fs*0.4);
-      ctx.fillRect(fx + fs*0.15, gy2 + fs*0.72, fs*0.1, fs*0.4);
-      // Gi lapel lines
-      ctx.strokeStyle = 'rgba(180,180,180,0.7)'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(fx, gy2 + fs*0.25); ctx.lineTo(fx - fs*0.4, gy2 + fs*0.8); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(fx, gy2 + fs*0.25); ctx.lineTo(fx + fs*0.4, gy2 + fs*0.8); ctx.stroke();
+      ctx.moveTo(-gw/2, H); ctx.lineTo(-gw/2,0);
+      ctx.lineTo(-fs*0.12,-fs*0.08); ctx.lineTo(0,fs*0.28);
+      ctx.lineTo(fs*0.12,-fs*0.08); ctx.lineTo(gw/2,0);
+      ctx.lineTo(gw/2,H); ctx.closePath(); ctx.fill();
+      // Belt
+      ctx.fillStyle='rgba(124,58,237,0.92)';
+      ctx.fillRect(-gw/2, fs*0.55, gw, fs*0.12);
+      ctx.fillRect(-fs*0.13, fs*0.5, fs*0.26, fs*0.22);
+      ctx.fillRect(-fs*0.26,fs*0.72,fs*0.11,fs*0.42);
+      ctx.fillRect(fs*0.15,fs*0.72,fs*0.11,fs*0.42);
+      // Lapels
+      ctx.strokeStyle='rgba(180,180,180,0.6)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(0,fs*0.28); ctx.lineTo(-fs*0.42,fs*0.82); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,fs*0.28); ctx.lineTo(fs*0.42,fs*0.82);  ctx.stroke();
       ctx.restore();
 
     } else if (id === 'confetti') {
-      // Animated confetti rain
       const t = Date.now() / 1000;
       ctx.save();
       CONFETTI_DOTS.forEach((d, i) => {
         const x = ((d.x + d.dx * t * 8) % 100 + 100) % 100 / 100 * W;
-        const y = ((d.y + t * 25 * (0.7 + (i % 5) * 0.12)) % 100) / 100 * H;
-        ctx.fillStyle = d.c;
-        ctx.globalAlpha = 0.82;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(t * 2 + i);
-        ctx.fillRect(-d.r/2, -d.r/2, d.r, d.r * 0.5);
-        ctx.restore();
+        const y = ((d.y + t * 25 * (0.7 + (i%5)*0.12)) % 100) / 100 * H;
+        ctx.fillStyle=d.c; ctx.globalAlpha=0.82;
+        ctx.save(); ctx.translate(x,y); ctx.rotate(t*2+i);
+        ctx.fillRect(-d.r/2,-d.r/2,d.r,d.r*0.5); ctx.restore();
       });
-      // Party text banner
-      ctx.globalAlpha = 0.9;
-      ctx.font = `bold ${Math.round(fs*0.32)}px Heebo, Arial`;
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#FFD600';
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 4;
-      ctx.strokeText('🎉 מסיגבי! 🎉', W/2, H * 0.12);
-      ctx.fillText('🎉 מסיגבי! 🎉', W/2, H * 0.12);
+      ctx.globalAlpha=0.92;
+      ctx.font=`bold ${Math.round(fs*0.3)}px Heebo, Arial`;
+      ctx.textAlign='center'; ctx.fillStyle='#FFD600';
+      ctx.strokeStyle='#000'; ctx.lineWidth=4;
+      ctx.strokeText('🎉 מסיגבי! 🎉',W/2,H*0.1);
+      ctx.fillText('🎉 מסיגבי! 🎉',W/2,H*0.1);
       ctx.restore();
     }
   }
@@ -2768,26 +2792,20 @@ function generateOutfit() {
     pbSnapped = true;
     cancelAnimationFrame(pbRafId);
 
-    // Final render one more time
     const video = getVideo();
     const canvas = getCanvas();
     const ctx = getCtx();
     const W = canvas.width, H = canvas.height;
-    ctx.save();
-    ctx.translate(W, 0); ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0, W, H);
-    ctx.restore();
-    drawFilter(ctx, W, H, FILTERS[pbFilterIdx].id);
+    ctx.save(); ctx.translate(W,0); ctx.scale(-1,1);
+    ctx.drawImage(video,0,0,W,H); ctx.restore();
+    drawFilter(ctx, W, H, FILTERS[pbFilterIdx].id, pbLastDetection);
 
-    // Shutter flash
     const flash = document.getElementById('pb-shutter-flash');
     flash.classList.add('flash');
     setTimeout(() => flash.classList.remove('flash'), 300);
 
-    // Show result
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    const img = document.getElementById('pb-result-img');
-    img.src = dataUrl;
+    document.getElementById('pb-result-img').src = dataUrl;
     document.getElementById('pb-result').style.display = 'block';
     document.getElementById('pb-snap-btn').style.display = 'none';
     showToast('📸 תמונה נלכדה! הורד אותה 🎉');
@@ -2795,10 +2813,9 @@ function generateOutfit() {
   window.pbSnap = pbSnap;
 
   function pbDownload() {
-    const canvas = getCanvas();
     const a = document.createElement('a');
     a.download = 'masigabi-photo.jpg';
-    a.href = canvas.toDataURL('image/jpeg', 0.92);
+    a.href = getCanvas().toDataURL('image/jpeg', 0.92);
     a.click();
   }
   window.pbDownload = pbDownload;
@@ -3570,6 +3587,21 @@ function drawPlayerFighter(ctx, f) {
   ctx.beginPath();
   ctx.arc(w / 2, h * 0.08, 12, Math.PI, 0);
   ctx.fill();
+
+  // Headband (red with white stripe — karate style)
+  ctx.fillStyle = '#e81c1c';
+  ctx.fillRect(w / 2 - 14, h * 0.1, 28, 6);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(w / 2 - 14, h * 0.115, 28, 2);
+  // Headband knot tails on right side (trailing back)
+  ctx.fillStyle = '#e81c1c';
+  ctx.save();
+  ctx.translate(w / 2 + 13, h * 0.115);
+  ctx.rotate(0.3);
+  ctx.fillRect(0, 0, 10, 4);
+  ctx.rotate(0.5);
+  ctx.fillRect(0, 2, 8, 3);
+  ctx.restore();
 
   // Eyes
   if (!isHurt && !isDead) {
