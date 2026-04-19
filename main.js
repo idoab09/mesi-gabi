@@ -2857,9 +2857,84 @@ function generateOutfit() {
   window.pbSnap = pbSnap;
 
   function pbDownload() {
+    const src = getCanvas();
+    const PW = src.width;
+    const PH = src.height;
+    const BORDER = Math.round(PW * 0.07);
+    const HEADER = Math.round(PW * 0.22);
+    const FOOTER = Math.round(PW * 0.16);
+    const TW = PW + BORDER * 2;
+    const TH = PH + HEADER + FOOTER + BORDER * 2;
+
+    const out = document.createElement('canvas');
+    out.width = TW;
+    out.height = TH;
+    const c = out.getContext('2d');
+
+    // background — white paper
+    c.fillStyle = '#ffffff';
+    c.fillRect(0, 0, TW, TH);
+
+    // colourful top frame band
+    const grad = c.createLinearGradient(0, 0, TW, 0);
+    grad.addColorStop(0,   '#ff2d78');
+    grad.addColorStop(0.25,'#ff9900');
+    grad.addColorStop(0.5, '#ffe600');
+    grad.addColorStop(0.75,'#00e0ff');
+    grad.addColorStop(1,   '#cc00ff');
+    c.fillStyle = grad;
+    c.fillRect(0, 0, TW, HEADER);
+
+    // bottom frame band (reversed)
+    const gradB = c.createLinearGradient(TW, 0, 0, 0);
+    gradB.addColorStop(0,   '#ff2d78');
+    gradB.addColorStop(0.25,'#ff9900');
+    gradB.addColorStop(0.5, '#ffe600');
+    gradB.addColorStop(0.75,'#00e0ff');
+    gradB.addColorStop(1,   '#cc00ff');
+    c.fillStyle = gradB;
+    c.fillRect(0, TH - FOOTER, TW, FOOTER);
+
+    // side borders
+    c.fillStyle = '#111';
+    c.fillRect(0, HEADER, BORDER, PH + BORDER * 2);
+    c.fillRect(TW - BORDER, HEADER, BORDER, PH + BORDER * 2);
+
+    // header text — title
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    const titleSize = Math.round(HEADER * 0.38);
+    c.font = `900 ${titleSize}px 'Heebo', Arial, sans-serif`;
+    c.fillStyle = '#fff';
+    c.shadowColor = 'rgba(0,0,0,0.4)';
+    c.shadowBlur = 8;
+    c.fillText('מסיגבי 🎉', TW / 2, HEADER * 0.38);
+    c.shadowBlur = 0;
+
+    // header emojis row
+    const emojiSize = Math.round(HEADER * 0.28);
+    c.font = `${emojiSize}px Arial`;
+    c.fillText('🦆 📸 🥋 🎊 🦆', TW / 2, HEADER * 0.78);
+
+    // paste photo
+    c.drawImage(src, BORDER, HEADER + BORDER, PW, PH);
+
+    // footer text
+    const footerMid = TH - FOOTER / 2;
+    const subSize = Math.round(FOOTER * 0.3);
+    c.font = `900 ${subSize}px 'Heebo', Arial, sans-serif`;
+    c.fillStyle = '#fff';
+    c.shadowColor = 'rgba(0,0,0,0.3)';
+    c.shadowBlur = 6;
+    c.fillText('המסיבה של גבי • אוגוסט 2025', TW / 2, footerMid - subSize * 0.6);
+    const tagSize = Math.round(FOOTER * 0.22);
+    c.font = `${tagSize}px Arial`;
+    c.fillText('✨ 🎵 🎂 🎵 ✨', TW / 2, footerMid + subSize * 0.7);
+    c.shadowBlur = 0;
+
     const a = document.createElement('a');
-    a.download = 'masigabi-photo.jpg';
-    a.href = getCanvas().toDataURL('image/jpeg', 0.92);
+    a.download = 'masigabi-photo.png';
+    a.href = out.toDataURL('image/png');
     a.click();
   }
   window.pbDownload = pbDownload;
