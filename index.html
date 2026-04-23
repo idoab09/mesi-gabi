@@ -69,6 +69,21 @@
   </div>
 </section>
 
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
+<!-- COUNTDOWN -->
+<section class="countdown-section">
+  <p class="section-title"><span class="section-emoji">⏳</span> <span class="section-text">עוד כמה זמן עד המסיבה?</span></p>
+  <div class="countdown-boxes">
+    <div class="cd-box"><span class="cd-num" id="cd-days">00</span><span class="cd-label">ימים</span></div>
+    <div class="cd-box"><span class="cd-num" id="cd-hours">00</span><span class="cd-label">שעות</span></div>
+    <div class="cd-box"><span class="cd-num" id="cd-mins">00</span><span class="cd-label">דקות</span></div>
+    <div class="cd-box"><span class="cd-num" id="cd-secs">00</span><span class="cd-label">שניות</span></div>
+  </div>
+</section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
 <section class="dj-section">
   <h2 class="section-title"><span class="section-emoji">🎧</span> <span class="section-text">די-ג'יי מסיגבי</span> <span class="section-emoji">🎧</span></h2>
   <div class="dj-deck">
@@ -242,16 +257,61 @@
 
   <audio id="dj-audio" preload="metadata"></audio>
 </section>
+
 <div class="section-divider"><span><i></i><i></i><i></i></span></div>
 
-<!-- COUNTDOWN -->
-<section class="countdown-section">
-  <p class="section-title"><span class="section-emoji">⏳</span> <span class="section-text">עוד כמה זמן עד המסיבה?</span></p>
-  <div class="countdown-boxes">
-    <div class="cd-box"><span class="cd-num" id="cd-days">00</span><span class="cd-label">ימים</span></div>
-    <div class="cd-box"><span class="cd-num" id="cd-hours">00</span><span class="cd-label">שעות</span></div>
-    <div class="cd-box"><span class="cd-num" id="cd-mins">00</span><span class="cd-label">דקות</span></div>
-    <div class="cd-box"><span class="cd-num" id="cd-secs">00</span><span class="cd-label">שניות</span></div>
+<!-- INFO + RSVP -->
+<section class="info-section" id="rsvp">
+  <div class="info-card">
+    <h2 class="card-title"><span class="section-text">פרטי המסיבה</span> <span class="section-emoji">🎊</span></h2>
+    <div class="info-rows">
+      <div class="info-row"><span class="row-icon">📅</span><span>7 באוגוסט</span></div>
+      <div class="info-row"><span class="row-icon">⏰</span><span>21:00 — כל הלילה!</span></div>
+      <div class="info-row"><span class="row-icon">📍</span><span>סנטוריני - יוון</span></div>
+      <div class="info-row"><span class="row-icon">🥋</span><span>קוד לבוש: גי של קארטה!</span></div>
+      <div class="info-row"><span class="row-icon">🦆</span><span>ברווזים — מוזמנים בחום!</span></div>
+    </div>
+
+    <div class="rsvp-title">האם אתם מגיעים? 🎉</div>
+    <div class="rsvp-form" id="rsvp-form">
+      <input class="rsvp-input" type="text" id="rsvp-name" placeholder="השם שלך" autocomplete="off" />
+      <div class="rsvp-buttons">
+        <button class="btn-yes" onclick="sendRSVP(true)">✅ מגיע/ה!</button>
+        <button class="btn-no" onclick="sendRSVP(false)">😢 לא יכול/ה</button>
+      </div>
+    </div>
+
+    <div class="rsvp-success" id="rsvp-success">
+      <span class="success-emoji">🎊</span>
+      <p id="rsvp-success-msg">תודה! נתראה במסיבה!</p>
+      <button class="btn-start" style="margin-top:0.8rem;width:auto;padding:0.5rem 1.5rem;" onclick="resetRSVP()">הוסף עוד מגיע/ה</button>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
+<!-- GUEST LIST -->
+<section class="info-section">
+  <div class="info-card" id="guest-list-card">
+    <h2 class="card-title"><span class="section-emoji">🎉</span> <span class="section-text">מי מגיע למסיגבי?</span></h2>
+    <div id="guest-count-line" style="color:rgba(255,255,255,0.5);font-size:1rem;margin-bottom:1.2rem;">עדיין אין מגיעים — היה הראשון!</div>
+    <div id="guest-list-grid"></div>
+  </div>
+</section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
+<!-- NOTICEBOARD -->
+<section class="info-section">
+  <h2 class="section-title"><span class="section-emoji">📌</span> <span class="section-text">לוח המודעות</span> <span class="section-emoji">📌</span></h2>
+  <div class="info-card noticeboard-card">
+    <div class="noticeboard-form">
+      <input class="rsvp-input" type="text" id="noticeboard-name" placeholder="השם שלך" maxlength="40" autocomplete="off" />
+      <textarea id="noticeboard-input" class="noticeboard-input" placeholder="כתוב/י הודעה... ✍️" maxlength="200"></textarea>
+      <button class="btn-party" style="width:100%;font-size:0.9rem;padding:0.6rem;" onclick="postNoticeboardMessage()">פרסם הודעה 📌</button>
+    </div>
+    <div id="noticeboard-list"></div>
   </div>
 </section>
 
@@ -617,305 +677,6 @@
 
 <div class="section-divider"><span><i></i><i></i><i></i></span></div>
 
-<!-- INVITE CARD GENERATOR -->
-<section class="card-gen-section">
-  <h2 class="section-title"><span class="section-emoji">🪪</span> <span class="section-text">כרטיס הזמנה אישי</span> <span class="section-emoji">🪪</span></h2>
-  <p class="card-gen-subtitle">ענה/י על 5 שאלות, גלה/י את האישיות שלך — וצור/י כרטיס הזמנה להוריד!</p>
-
-  <!-- STEP 1: SELFIE -->
-  <div class="card-gen-step" id="cg-step-1">
-    <div class="cg-step-label">שלב 1 מתוך 3 — תמונה</div>
-    <h3 class="cg-step-title">📸 צלם/י סלפי!</h3>
-    <div class="cg-camera-wrap">
-      <video id="cg-video" autoplay playsinline muted></video>
-      <canvas id="cg-snap-canvas" style="display:none"></canvas>
-      <img id="cg-preview" style="display:none" alt="preview" />
-      <div class="cg-camera-overlay" id="cg-camera-overlay">
-        <button class="btn-party cg-btn-camera" id="cg-btn-open-camera" onclick="cgOpenCamera()">📷 פתח מצלמה</button>
-      </div>
-    </div>
-    <div class="cg-camera-controls" id="cg-camera-controls" style="display:none">
-      <button class="btn-start cg-snap-btn" onclick="cgSnap()">📸 צלם!</button>
-      <button class="btn-no cg-btn-small" onclick="cgRetake()">🔄 מחדש</button>
-    </div>
-    <div class="cg-photo-controls" id="cg-photo-controls" style="display:none">
-      <button class="btn-yes" onclick="cgStep(2)">המשך ←</button>
-      <button class="btn-no cg-btn-small" onclick="cgRetake()">🔄 צלם שוב</button>
-    </div>
-    <p class="cg-hint">אין מצלמה? <button class="cg-link-btn" onclick="cgUploadInstead()">העלה תמונה</button></p>
-    <input type="file" id="cg-file-input" accept="image/*" style="display:none" onchange="cgFileChosen(event)" />
-  </div>
-
-  <!-- STEP 2: QUIZ -->
-  <div class="card-gen-step" id="cg-step-2" style="display:none">
-    <div class="cg-step-label">שלב 2 מתוך 3 — אישיות</div>
-    <h3 class="cg-step-title">🧬 מה האישיות שלך?</h3>
-    <div class="cg-quiz-wrap" id="cg-quiz-wrap"></div>
-  </div>
-
-  <!-- STEP 3: CUSTOMIZE + DOWNLOAD -->
-  <div class="card-gen-step" id="cg-step-3" style="display:none">
-    <div class="cg-step-label">שלב 3 מתוך 3 — עיצוב</div>
-    <h3 class="cg-step-title">🎨 עצב/י את הכרטיס!</h3>
-
-    <div class="cg-result-personality" id="cg-result-personality"></div>
-
-    <div class="cg-customize-row">
-      <div class="cg-customize-group">
-        <div class="cg-customize-label">מסגרת</div>
-        <div class="cg-frame-picker" id="cg-frame-picker"></div>
-      </div>
-      <div class="cg-customize-group">
-        <div class="cg-customize-label">אמוג'י</div>
-        <div class="cg-emoji-picker" id="cg-emoji-picker"></div>
-      </div>
-    </div>
-
-    <div class="cg-customize-group" style="margin-top:1rem">
-      <div class="cg-customize-label">ציטוט</div>
-      <div class="cg-quote-picker" id="cg-quote-picker"></div>
-    </div>
-
-    <div class="cg-name-row">
-      <input class="rsvp-input" id="cg-name-input" type="text" placeholder="השם שלך על הכרטיס" maxlength="20" />
-    </div>
-
-    <!-- LIVE CARD PREVIEW -->
-    <div class="cg-preview-wrap">
-      <canvas id="cg-card-canvas" width="600" height="400"></canvas>
-    </div>
-
-    <button class="btn-party cg-download-btn" onclick="cgDownload()">⬇️ הורד כרטיס!</button>
-    <button class="btn-no cg-btn-small" style="margin-top:0.5rem;width:100%" onclick="cgReset()">🔄 התחל מחדש</button>
-  </div>
-</section>
-
-<div class="section-divider"><span><i></i><i></i><i></i></span></div>
-
-<!-- INFO + RSVP -->
-<section class="info-section" id="rsvp">
-  <div class="info-card">
-    <h2 class="card-title"><span class="section-text">פרטי המסיבה</span> <span class="section-emoji">🎊</span></h2>
-    <div class="info-rows">
-      <div class="info-row"><span class="row-icon">📅</span><span>7 באוגוסט</span></div>
-      <div class="info-row"><span class="row-icon">⏰</span><span>21:00 — כל הלילה!</span></div>
-      <div class="info-row"><span class="row-icon">📍</span><span>סנטוריני - יוון</span></div>
-      <div class="info-row"><span class="row-icon">🥋</span><span>קוד לבוש: גי של קארטה!</span></div>
-      <div class="info-row"><span class="row-icon">🦆</span><span>ברווזים — מוזמנים בחום!</span></div>
-    </div>
-
-    <div class="rsvp-title">האם אתם מגיעים? 🎉</div>
-    <div class="rsvp-form" id="rsvp-form">
-      <input class="rsvp-input" type="text" id="rsvp-name" placeholder="השם שלך" autocomplete="off" />
-      <div class="rsvp-buttons">
-        <button class="btn-yes" onclick="sendRSVP(true)">✅ מגיע/ה!</button>
-        <button class="btn-no" onclick="sendRSVP(false)">😢 לא יכול/ה</button>
-      </div>
-    </div>
-
-    <div class="rsvp-success" id="rsvp-success">
-      <span class="success-emoji">🎊</span>
-      <p id="rsvp-success-msg">תודה! נתראה במסיבה!</p>
-      <button class="btn-start" style="margin-top:0.8rem;width:auto;padding:0.5rem 1.5rem;" onclick="resetRSVP()">הוסף עוד מגיע/ה</button>
-    </div>
-  </div>
-</section>
-
-<!-- OUTFIT GENERATOR -->
-<section class="info-section section-no-top-pad">
-  <div class="info-card outfit-card">
-    <h2 class="card-title"><span class="section-emoji">👗</span> <span class="section-text">מה ללבוש למסיגבי?</span> <span class="section-emoji">👘</span></h2>
-    <p class="section-subtitle">קוד לבוש: גי של קארטה — אבל בסטייל שלך!</p>
-    <button class="btn-outfit-gen" id="outfit-gen-btn" onclick="generateOutfit()">✨ תן לי לוק! ✨</button>
-    <div class="outfit-result" id="outfit-result" style="display:none">
-      <div class="outfit-grid" id="outfit-grid"></div>
-      <div class="outfit-vibe" id="outfit-vibe"></div>
-      <button class="btn-outfit-gen" style="margin-top:1rem;font-size:0.9rem;padding:0.6rem 1.8rem;" onclick="generateOutfit()">🎲 לוק אחר!</button>
-    </div>
-  </div>
-</section>
-
-<!-- EXCUSE GENERATOR -->
-<section class="info-section section-no-top-pad">
-  <div class="excuse-box">
-    <span class="excuse-label">לא יכול/ה להגיע? 🤔</span>
-    <button class="btn-excuse" onclick="generateExcuse()">תן לי תירוץ 🎲</button>
-    <p class="excuse-text" id="excuse-text"></p>
-  </div>
-</section>
-
-<!-- GUEST LIST -->
-<section class="info-section section-no-top-pad">
-  <div class="info-card" id="guest-list-card">
-    <h2 class="card-title"><span class="section-emoji">🎉</span> <span class="section-text">מי מגיע למסיגבי?</span></h2>
-    <div id="guest-count-line" style="color:rgba(255,255,255,0.5);font-size:1rem;margin-bottom:1.2rem;">עדיין אין מגיעים — היה הראשון!</div>
-    <div id="guest-list-grid"></div>
-  </div>
-</section>
-
-<!-- PHOTO BOOTH -->
-<section class="info-section section-no-top-pad">
-  <h2 class="section-title"><span class="section-emoji">📸</span> <span class="section-text">תא צילום מסיגבי</span> <span class="section-emoji">📸</span></h2>
-  <p class="section-subtitle">צלם/י סלפי עם פילטר מסיבתי — ושמור/י לזיכרון! 🎉</p>
-
-  <div class="booth-scene">
-    <!-- the physical booth enclosure -->
-    <div class="booth-body">
-
-      <!-- roof sign -->
-      <div class="booth-sign">
-        <span class="booth-sign-light bl-r"></span>
-        <span class="booth-sign-text">PHOTO BOOTH</span>
-        <span class="booth-sign-light bl-y"></span>
-      </div>
-
-      <!-- main booth body -->
-      <div class="booth-shell">
-        <!-- left wall stripe -->
-        <div class="booth-wall booth-wall-l"></div>
-        <!-- right wall stripe -->
-        <div class="booth-wall booth-wall-r"></div>
-
-        <!-- interior -->
-        <div class="booth-interior">
-
-          <!-- curtain at top -->
-          <div class="booth-curtain">
-            <div class="booth-curtain-fold"></div>
-            <div class="booth-curtain-fold"></div>
-            <div class="booth-curtain-fold"></div>
-            <div class="booth-curtain-fold"></div>
-            <div class="booth-curtain-fold"></div>
-          </div>
-
-          <!-- camera unit mounted at top -->
-          <div class="booth-camera-unit">
-            <div class="booth-camera-lens">
-              <div class="booth-camera-inner"></div>
-            </div>
-            <div class="booth-camera-flash-led" id="pb-cam-led"></div>
-          </div>
-
-          <!-- viewport / live feed -->
-          <div class="pb-viewport">
-            <video id="pb-video" autoplay playsinline muted></video>
-            <canvas id="pb-canvas"></canvas>
-            <div class="pb-shutter-flash" id="pb-shutter-flash"></div>
-          </div>
-
-          <!-- control panel -->
-          <div class="booth-panel">
-            <div class="booth-panel-label">בחר/י פילטר</div>
-            <div class="pb-filter-row" id="pb-filter-row">
-              <button class="pb-filter-btn active" onclick="pbSetFilter(0)">🦆</button>
-              <button class="pb-filter-btn" onclick="pbSetFilter(1)">🥳</button>
-              <button class="pb-filter-btn" onclick="pbSetFilter(2)">🕶️</button>
-              <button class="pb-filter-btn" onclick="pbSetFilter(3)">🥋</button>
-              <button class="pb-filter-btn" onclick="pbSetFilter(4)">🎉</button>
-            </div>
-            <div class="booth-btn-row">
-              <button class="pb-snap-btn" id="pb-snap-btn" onclick="pbSnap()">📸 צלם!</button>
-              <button class="pb-cam-btn" id="pb-cam-btn" onclick="pbStartCamera()">📷 פתח מצלמה</button>
-            </div>
-          </div>
-
-          <!-- coin slot -->
-          <div class="booth-coin-slot">
-            <div class="booth-coin-slot-hole"></div>
-            <div class="booth-coin-slot-label">הכנס מטבע ✨</div>
-          </div>
-
-        </div><!-- /booth-interior -->
-      </div><!-- /booth-shell -->
-
-      <!-- print output slot at bottom -->
-      <div class="booth-print-slot">
-        <div class="booth-print-slot-label">📄 הדפסה</div>
-        <div class="booth-print-slot-hole"></div>
-      </div>
-
-    </div><!-- /booth-body -->
-
-    <!-- printed photo strip that slides out -->
-    <div class="pb-result" id="pb-result" style="display:none">
-      <div class="pb-strip">
-        <div class="pb-strip-header">✦ מסיגבי ✦</div>
-        <img id="pb-result-img" alt="תמונה" />
-        <div class="pb-strip-footer">📅 אוגוסט 2025</div>
-      </div>
-      <div class="pb-result-btns">
-        <button class="btn-yes" onclick="pbDownload()">⬇️ הורד תמונה</button>
-        <button class="btn-no" onclick="pbRetake()">🔄 צלם שוב</button>
-      </div>
-    </div>
-
-  </div><!-- /booth-scene -->
-</section>
-
-<div class="section-divider"><span><i></i><i></i><i></i></span></div>
-
-<!-- PHOTO WALL -->
-<section class="info-section photo-wall-section">
-  <h2 class="section-title"><span class="section-emoji">🖼️</span> <span class="section-text">קיר התמונות</span> <span class="section-emoji">🖼️</span></h2>
-  <p class="section-subtitle">העלה/י תמונה עם מסגרת וכיתוב — ותופיע/י על הקיר!</p>
-
-  <div class="info-card photo-wall-card">
-
-    <!-- UPLOAD FORM -->
-    <div class="pw-upload-form" id="pw-upload-form">
-      <h3 class="pw-form-title">📸 העלה/י תמונה</h3>
-
-      <!-- Image picker + crop preview -->
-      <div class="pw-crop-wrap" id="pw-crop-wrap">
-        <div class="pw-drop-zone" id="pw-drop-zone" onclick="document.getElementById('pw-file-input').click()">
-          <div class="pw-drop-icon">📷</div>
-          <div class="pw-drop-text">לחץ/י לבחירת תמונה<br><span>או גרור/י לכאן</span></div>
-        </div>
-        <input type="file" id="pw-file-input" accept="image/*" style="display:none" onchange="pwFileChosen(event)" />
-        <canvas id="pw-crop-canvas" style="display:none"></canvas>
-        <div class="pw-crop-preview-wrap" id="pw-crop-preview-wrap" style="display:none">
-          <img id="pw-crop-img" alt="preview" />
-          <div class="pw-crop-overlay">1:1</div>
-          <button class="btn-no pw-retake-btn" onclick="pwRetake()">🔄 בחר שוב</button>
-        </div>
-      </div>
-
-      <!-- Frame picker -->
-      <div class="pw-section-label">בחר/י מסגרת</div>
-      <div class="pw-frame-picker" id="pw-frame-picker">
-        <button class="pw-frame-btn active" data-frame="polaroid" onclick="pwSelectFrame(this,'polaroid')">🤍 פולארויד</button>
-        <button class="pw-frame-btn" data-frame="glitter" onclick="pwSelectFrame(this,'glitter')">✨ גליטר</button>
-        <button class="pw-frame-btn" data-frame="gold" onclick="pwSelectFrame(this,'gold')">🥇 זהב</button>
-        <button class="pw-frame-btn" data-frame="neon" onclick="pwSelectFrame(this,'neon')">💜 ניאון</button>
-        <button class="pw-frame-btn" data-frame="retro" onclick="pwSelectFrame(this,'retro')">📼 רטרו</button>
-        <button class="pw-frame-btn" data-frame="duck" onclick="pwSelectFrame(this,'duck')">🦆 ברווז</button>
-      </div>
-
-      <!-- Name + caption -->
-      <input class="rsvp-input" type="text" id="pw-uploader" placeholder="השם שלך" maxlength="40" autocomplete="off" style="margin-bottom:0.6rem" />
-      <input class="rsvp-input" type="text" id="pw-caption" placeholder="כיתוב (אופציונלי) ✍️" maxlength="100" autocomplete="off" style="margin-bottom:1rem" />
-
-      <button class="btn-party pw-submit-btn" id="pw-submit-btn" onclick="pwSubmit()">העלה לקיר 🖼️</button>
-      <div class="pw-upload-status" id="pw-upload-status"></div>
-    </div>
-
-  </div><!-- /photo-wall-card -->
-</section>
-
-<!-- CLOTHESLINE WALL -->
-<div class="pw-clothesline-section" id="pw-clothesline-section">
-  <div class="pw-rope-wrap" aria-hidden="true">
-    <svg class="pw-rope-svg" preserveAspectRatio="none" viewBox="0 0 1000 28">
-      <line class="pw-rope-path" x1="0" y1="14" x2="1000" y2="14"/>
-    </svg>
-  </div>
-  <div class="pw-clothesline-track" id="pw-clothesline-track">
-    <div class="pw-wall-empty" id="pw-wall-empty">עדיין אין תמונות — היה/י הראשון/ה! 📸</div>
-  </div>
-</div>
-
-<div class="section-divider"><span><i></i><i></i><i></i></span></div>
-
 <!-- KARATE GAME -->
 <section class="karate-section" id="karate-section">
   <h2 class="section-title"><span class="section-emoji">🥋</span> <span class="section-text">קארטה עד המסיבה!</span> <span class="section-emoji">🥋</span></h2>
@@ -1145,20 +906,216 @@
 
 <div class="section-divider"><span><i></i><i></i><i></i></span></div>
 
-<!-- NOTICEBOARD -->
-<section class="info-section section-no-top-pad">
-  <div class="info-card noticeboard-card">
-    <h2 class="card-title"><span class="section-emoji">📌</span> <span class="section-text">לוח המודעות</span></h2>
-    <div class="noticeboard-form">
-      <input class="rsvp-input" type="text" id="noticeboard-name" placeholder="השם שלך" maxlength="40" autocomplete="off" />
-      <textarea id="noticeboard-input" class="noticeboard-input" placeholder="כתוב/י הודעה... ✍️" maxlength="200"></textarea>
-      <button class="btn-party" style="width:100%;font-size:0.9rem;padding:0.6rem;" onclick="postNoticeboardMessage()">פרסם הודעה 📌</button>
+<!-- PHOTO BOOTH -->
+<section class="info-section">
+  <h2 class="section-title"><span class="section-emoji">📸</span> <span class="section-text">תא צילום מסיגבי</span> <span class="section-emoji">📸</span></h2>
+  <p class="section-subtitle">צלם/י סלפי עם פילטר מסיבתי — ושמור/י לזיכרון! 🎉</p>
+
+  <div class="booth-scene">
+    <div class="booth-body">
+      <div class="booth-sign">
+        <span class="booth-sign-light bl-r"></span>
+        <span class="booth-sign-text">PHOTO BOOTH</span>
+        <span class="booth-sign-light bl-y"></span>
+      </div>
+      <div class="booth-shell">
+        <div class="booth-wall booth-wall-l"></div>
+        <div class="booth-wall booth-wall-r"></div>
+        <div class="booth-interior">
+          <div class="booth-curtain">
+            <div class="booth-curtain-fold"></div>
+            <div class="booth-curtain-fold"></div>
+            <div class="booth-curtain-fold"></div>
+            <div class="booth-curtain-fold"></div>
+            <div class="booth-curtain-fold"></div>
+          </div>
+          <div class="booth-camera-unit">
+            <div class="booth-camera-lens">
+              <div class="booth-camera-inner"></div>
+            </div>
+            <div class="booth-camera-flash-led" id="pb-cam-led"></div>
+          </div>
+          <div class="pb-viewport">
+            <video id="pb-video" autoplay playsinline muted></video>
+            <canvas id="pb-canvas"></canvas>
+            <div class="pb-shutter-flash" id="pb-shutter-flash"></div>
+          </div>
+          <div class="booth-panel">
+            <div class="booth-panel-label">בחר/י פילטר</div>
+            <div class="pb-filter-row" id="pb-filter-row">
+              <button class="pb-filter-btn active" onclick="pbSetFilter(0)">🦆</button>
+              <button class="pb-filter-btn" onclick="pbSetFilter(1)">🥳</button>
+              <button class="pb-filter-btn" onclick="pbSetFilter(2)">🕶️</button>
+              <button class="pb-filter-btn" onclick="pbSetFilter(3)">🥋</button>
+              <button class="pb-filter-btn" onclick="pbSetFilter(4)">🎉</button>
+            </div>
+            <div class="booth-btn-row">
+              <button class="pb-snap-btn" id="pb-snap-btn" onclick="pbSnap()">📸 צלם!</button>
+              <button class="pb-cam-btn" id="pb-cam-btn" onclick="pbStartCamera()">📷 פתח מצלמה</button>
+            </div>
+          </div>
+          <div class="booth-coin-slot">
+            <div class="booth-coin-slot-hole"></div>
+            <div class="booth-coin-slot-label">הכנס מטבע ✨</div>
+          </div>
+        </div><!-- /booth-interior -->
+      </div><!-- /booth-shell -->
+      <div class="booth-print-slot">
+        <div class="booth-print-slot-label">📄 הדפסה</div>
+        <div class="booth-print-slot-hole"></div>
+      </div>
+    </div><!-- /booth-body -->
+    <div class="pb-result" id="pb-result" style="display:none">
+      <div class="pb-strip">
+        <div class="pb-strip-header">✦ מסיגבי ✦</div>
+        <img id="pb-result-img" alt="תמונה" />
+        <div class="pb-strip-footer">📅 אוגוסט 2025</div>
+      </div>
+      <div class="pb-result-btns">
+        <button class="btn-yes" onclick="pbDownload()">⬇️ הורד תמונה</button>
+        <button class="btn-no" onclick="pbRetake()">🔄 צלם שוב</button>
+      </div>
     </div>
-    <div id="noticeboard-list"></div>
+  </div><!-- /booth-scene -->
+</section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
+<!-- PHOTO WALL -->
+<section class="info-section photo-wall-section">
+  <h2 class="section-title"><span class="section-emoji">🖼️</span> <span class="section-text">קיר התמונות</span> <span class="section-emoji">🖼️</span></h2>
+  <p class="section-subtitle">העלה/י תמונה עם מסגרת וכיתוב — ותופיע/י על הקיר!</p>
+  <div class="info-card photo-wall-card">
+    <div class="pw-upload-form" id="pw-upload-form">
+      <h3 class="pw-form-title">📸 העלה/י תמונה</h3>
+      <div class="pw-crop-wrap" id="pw-crop-wrap">
+        <div class="pw-drop-zone" id="pw-drop-zone" onclick="document.getElementById('pw-file-input').click()">
+          <div class="pw-drop-icon">📷</div>
+          <div class="pw-drop-text">לחץ/י לבחירת תמונה<br><span>או גרור/י לכאן</span></div>
+        </div>
+        <input type="file" id="pw-file-input" accept="image/*" style="display:none" onchange="pwFileChosen(event)" />
+        <canvas id="pw-crop-canvas" style="display:none"></canvas>
+        <div class="pw-crop-preview-wrap" id="pw-crop-preview-wrap" style="display:none">
+          <img id="pw-crop-img" alt="preview" />
+          <div class="pw-crop-overlay">1:1</div>
+          <button class="btn-no pw-retake-btn" onclick="pwRetake()">🔄 בחר שוב</button>
+        </div>
+      </div>
+      <div class="pw-section-label">בחר/י מסגרת</div>
+      <div class="pw-frame-picker" id="pw-frame-picker">
+        <button class="pw-frame-btn active" data-frame="polaroid" onclick="pwSelectFrame(this,'polaroid')">🤍 פולארויד</button>
+        <button class="pw-frame-btn" data-frame="glitter" onclick="pwSelectFrame(this,'glitter')">✨ גליטר</button>
+        <button class="pw-frame-btn" data-frame="gold" onclick="pwSelectFrame(this,'gold')">🥇 זהב</button>
+        <button class="pw-frame-btn" data-frame="neon" onclick="pwSelectFrame(this,'neon')">💜 ניאון</button>
+        <button class="pw-frame-btn" data-frame="retro" onclick="pwSelectFrame(this,'retro')">📼 רטרו</button>
+        <button class="pw-frame-btn" data-frame="duck" onclick="pwSelectFrame(this,'duck')">🦆 ברווז</button>
+      </div>
+      <input class="rsvp-input" type="text" id="pw-uploader" placeholder="השם שלך" maxlength="40" autocomplete="off" style="margin-bottom:0.6rem" />
+      <input class="rsvp-input" type="text" id="pw-caption" placeholder="כיתוב (אופציונלי) ✍️" maxlength="100" autocomplete="off" style="margin-bottom:1rem" />
+      <button class="btn-party pw-submit-btn" id="pw-submit-btn" onclick="pwSubmit()">העלה לקיר 🖼️</button>
+      <div class="pw-upload-status" id="pw-upload-status"></div>
+    </div>
+  </div><!-- /photo-wall-card -->
+</section>
+
+<!-- CLOTHESLINE WALL -->
+<div class="pw-clothesline-section" id="pw-clothesline-section">
+  <div class="pw-rope-wrap" aria-hidden="true">
+    <svg class="pw-rope-svg" preserveAspectRatio="none" viewBox="0 0 1000 28">
+      <line class="pw-rope-path" x1="0" y1="14" x2="1000" y2="14"/>
+    </svg>
+  </div>
+  <div class="pw-clothesline-track" id="pw-clothesline-track">
+    <div class="pw-wall-empty" id="pw-wall-empty">עדיין אין תמונות — היה/י הראשון/ה! 📸</div>
+  </div>
+</div>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
+<!-- INVITE CARD GENERATOR -->
+<section class="card-gen-section">
+  <h2 class="section-title"><span class="section-emoji">🪪</span> <span class="section-text">כרטיס הזמנה אישי</span> <span class="section-emoji">🪪</span></h2>
+  <p class="card-gen-subtitle">ענה/י על 5 שאלות, גלה/י את האישיות שלך — וצור/י כרטיס הזמנה להוריד!</p>
+  <div class="card-gen-step" id="cg-step-1">
+    <div class="cg-step-label">שלב 1 מתוך 3 — תמונה</div>
+    <h3 class="cg-step-title">📸 צלם/י סלפי!</h3>
+    <div class="cg-camera-wrap">
+      <video id="cg-video" autoplay playsinline muted></video>
+      <canvas id="cg-snap-canvas" style="display:none"></canvas>
+      <img id="cg-preview" style="display:none" alt="preview" />
+      <div class="cg-camera-overlay" id="cg-camera-overlay">
+        <button class="btn-party cg-btn-camera" id="cg-btn-open-camera" onclick="cgOpenCamera()">📷 פתח מצלמה</button>
+      </div>
+    </div>
+    <div class="cg-camera-controls" id="cg-camera-controls" style="display:none">
+      <button class="btn-start cg-snap-btn" onclick="cgSnap()">📸 צלם!</button>
+      <button class="btn-no cg-btn-small" onclick="cgRetake()">🔄 מחדש</button>
+    </div>
+    <div class="cg-photo-controls" id="cg-photo-controls" style="display:none">
+      <button class="btn-yes" onclick="cgStep(2)">המשך ←</button>
+      <button class="btn-no cg-btn-small" onclick="cgRetake()">🔄 צלם שוב</button>
+    </div>
+    <p class="cg-hint">אין מצלמה? <button class="cg-link-btn" onclick="cgUploadInstead()">העלה תמונה</button></p>
+    <input type="file" id="cg-file-input" accept="image/*" style="display:none" onchange="cgFileChosen(event)" />
+  </div>
+  <div class="card-gen-step" id="cg-step-2" style="display:none">
+    <div class="cg-step-label">שלב 2 מתוך 3 — אישיות</div>
+    <h3 class="cg-step-title">🧬 מה האישיות שלך?</h3>
+    <div class="cg-quiz-wrap" id="cg-quiz-wrap"></div>
+  </div>
+  <div class="card-gen-step" id="cg-step-3" style="display:none">
+    <div class="cg-step-label">שלב 3 מתוך 3 — עיצוב</div>
+    <h3 class="cg-step-title">🎨 עצב/י את הכרטיס!</h3>
+    <div class="cg-result-personality" id="cg-result-personality"></div>
+    <div class="cg-customize-row">
+      <div class="cg-customize-group">
+        <div class="cg-customize-label">מסגרת</div>
+        <div class="cg-frame-picker" id="cg-frame-picker"></div>
+      </div>
+      <div class="cg-customize-group">
+        <div class="cg-customize-label">אמוג'י</div>
+        <div class="cg-emoji-picker" id="cg-emoji-picker"></div>
+      </div>
+    </div>
+    <div class="cg-customize-group" style="margin-top:1rem">
+      <div class="cg-customize-label">ציטוט</div>
+      <div class="cg-quote-picker" id="cg-quote-picker"></div>
+    </div>
+    <div class="cg-name-row">
+      <input class="rsvp-input" id="cg-name-input" type="text" placeholder="השם שלך על הכרטיס" maxlength="20" />
+    </div>
+    <div class="cg-preview-wrap">
+      <canvas id="cg-card-canvas" width="600" height="400"></canvas>
+    </div>
+    <button class="btn-party cg-download-btn" onclick="cgDownload()">⬇️ הורד כרטיס!</button>
+    <button class="btn-no cg-btn-small" style="margin-top:0.5rem;width:100%" onclick="cgReset()">🔄 התחל מחדש</button>
   </div>
 </section>
 
-<!-- DJ PLAYER -->
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
+<!-- OUTFIT GENERATOR -->
+<section class="info-section">
+  <div class="info-card outfit-card">
+    <h2 class="card-title"><span class="section-emoji">👗</span> <span class="section-text">מה ללבוש למסיגבי?</span> <span class="section-emoji">👘</span></h2>
+    <p class="section-subtitle">קוד לבוש: גי של קארטה — אבל בסטייל שלך!</p>
+    <button class="btn-outfit-gen" id="outfit-gen-btn" onclick="generateOutfit()">✨ תן לי לוק! ✨</button>
+    <div class="outfit-result" id="outfit-result" style="display:none">
+      <div class="outfit-grid" id="outfit-grid"></div>
+      <div class="outfit-vibe" id="outfit-vibe"></div>
+      <button class="btn-outfit-gen" style="margin-top:1rem;font-size:0.9rem;padding:0.6rem 1.8rem;" onclick="generateOutfit()">🎲 לוק אחר!</button>
+    </div>
+  </div>
+</section>
+
+<!-- EXCUSE GENERATOR -->
+<section class="info-section">
+  <div class="excuse-box">
+    <span class="excuse-label">לא יכול/ה להגיע? 🤔</span>
+    <button class="btn-excuse" onclick="generateExcuse()">תן לי תירוץ 🎲</button>
+    <p class="excuse-text" id="excuse-text"></p>
+  </div>
+</section>
 
 <div class="section-divider"><span><i></i><i></i><i></i></span></div>
 

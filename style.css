@@ -1763,7 +1763,6 @@ body {
 /* ===== CLOTHESLINE WALL ===== */
 .pw-clothesline-section {
   position: relative;
-  background: linear-gradient(180deg, rgba(20,10,40,0.95) 0%, rgba(10,5,25,1) 100%);
   padding: 0 0 3rem;
   overflow: visible; /* allow clip ::before to overlap rope-wrap */
 }
