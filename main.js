@@ -3937,3 +3937,51 @@ function generateExcuse() {
   }, 150);
 }
 
+
+// ========== FORTUNE TELLER ==========
+const FORTUNES = [
+  { emoji: '💃', text: 'הרגליים שלך יעשו דברים שאפילו אתה/את לא ידעת שאתה/את מסוגל/ת. רצפת הריקוד תזכור את שמך.' },
+  { emoji: '🥋', text: 'קאטה של ניצחון מחכה לך הלילה. מישהו יאתגר אותך לדו קרב — וייצור לך כבוד נצחי.' },
+  { emoji: '🦆', text: 'ברווז מסתורי יהפוך לחבר הטוב ביותר שלך הלילה. יחד תגיעו לדברים גדולים.' },
+  { emoji: '🎤', text: 'הרגע שבו תאחז במיקרופון ישנה הכל. הקהל כבר מחכה. תן/י לזה לצאת.' },
+  { emoji: '🍕', text: 'פיצה מיסטית תגיע אליך בדיוק ברגע הנכון. אל תשאיר/י פרוסה לאחרים.' },
+  { emoji: '✨', text: 'אנרגיית המסיבה תתלכד סביבך. כוכב בלתי צפוי — זה אתה/את.' },
+  { emoji: '🌙', text: 'בשעה המאוחרת, רגע קסום יקפיא את הזמן. עיניים פקוחות — תראה/י אותו.' },
+  { emoji: '🎸', text: 'מוזיקה אחת תגרום לך לשכוח את כל שאר העולם. תרקוד/י כאילו אין מחר.' },
+  { emoji: '🏆', text: 'ניצחון בלתי צפוי מחכה לך — בין אם במשחק, בריקוד, או בשיחה. תהיה/י מוכן/ה.' },
+  { emoji: '💫', text: 'הלילה הזה ייכנס לאגדה. סיפורים עליו יסופרו שנים קדימה, ואתה/את תהיה/י הגיבור/ה.' },
+  { emoji: '🎉', text: 'מישהו במסיבה מחפש אותך בדיוק עכשיו. הפגישה הזו תשנה משהו קטן אבל חשוב.' },
+  { emoji: '🌈', text: 'צבעי הלילה הזה יהיו כה עזים שהזיכרון יישאר צבעוני לנצח.' },
+  { emoji: '🔥', text: 'אנרגיה לוהטת. לא תוכל/י לעצור את עצמך — ונכון שלא לנסות.' },
+  { emoji: '🎊', text: 'ריקוד ספונטני אחד יהפוך לרגע המושלם של הלילה. תן/י לגוף להחליט.' },
+  { emoji: '⭐', text: 'כישרון נסתר שלך יתגלה הלילה בפני כולם. תיהנה/י מהתשואות.' },
+];
+
+let lastFortuneIdx = -1;
+let fortuneRevealed = false;
+
+function revealFortune() {
+  const ball = document.getElementById('fortune-ball');
+  const reveal = document.getElementById('fortune-reveal');
+  const emojiEl = document.getElementById('fortune-reveal-emoji');
+  const textEl = document.getElementById('fortune-reveal-text');
+  ball.classList.remove('fortune-shaking', 'fortune-glowing');
+  void ball.offsetWidth;
+  ball.classList.add('fortune-shaking');
+
+  reveal.style.display = 'none';
+
+  setTimeout(() => {
+    let idx;
+    do { idx = Math.floor(Math.random() * FORTUNES.length); } while (idx === lastFortuneIdx);
+    lastFortuneIdx = idx;
+    const f = FORTUNES[idx];
+
+    emojiEl.textContent = f.emoji;
+    textEl.textContent = '"' + f.text + '"';
+
+    reveal.style.display = 'block';
+    ball.classList.remove('fortune-shaking');
+    ball.classList.add('fortune-glowing');
+  }, 550);
+}

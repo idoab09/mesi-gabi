@@ -1,24 +1,22 @@
-const BIN_ID = '69d75c89aaba882197dc5ee2';
-const MASTER_KEY = '$2a$10$v2j06aVyWZMNAkxaPsNA7uligf2reBc/zHjnH0ULm6hshQJNs8GZ2';
-const BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://aqleksrbvrqueaqgsavk.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxbGVrc3JidnJxdWVhcWdzYXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NDg4MjUsImV4cCI6MjA5MjUyNDgyNX0.r2YsdGGc-Rz4rX3p1fIPlTXMGdvAWB7mQNZ5kE7UEL0';
 
 const VALID_GAMES = ['duck', 'balloon', 'memory', 'whack', 'simon', 'trivia'];
 const MAX_ENTRIES = 10;
 
-async function readBin() {
-  const res = await fetch(BASE + '/latest', {
-    headers: { 'X-Master-Key': MASTER_KEY },
-  });
-  const data = await res.json();
-  return data.record || {};
-}
+const headers = {
+  'apikey': SUPABASE_ANON_KEY,
+  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+  'Content-Type': 'application/json',
+};
 
-async function writeBin(record) {
-  await fetch(BASE, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
-    body: JSON.stringify(record),
-  });
+async function getEntries(game) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/leaderboard?game=eq.${game}&select=name,score&order=score.desc&limit=${MAX_ENTRIES}`,
+    { headers }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
 
 export default async function handler(req, res) {
@@ -35,12 +33,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const record = await readBin();
-    const leaderboards = record.leaderboards || {};
-    const entries = leaderboards[game] || [];
-
     if (req.method === 'GET') {
-      return res.status(200).json(entries);
+      return res.status(200).json(await getEntries(game));
     }
 
     if (req.method === 'POST') {
@@ -50,12 +44,14 @@ export default async function handler(req, res) {
       if (!name || isNaN(score) || score < 0) {
         return res.status(400).json({ error: 'Invalid entry' });
       }
-      const entry = { name, score, ts: Date.now() };
-      entries.push(entry);
-      entries.sort((a, b) => b.score - a.score);
-      leaderboards[game] = entries.slice(0, MAX_ENTRIES);
-      await writeBin({ ...record, leaderboards });
-      return res.status(200).json(leaderboards[game]);
+
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ game, name, score }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return res.status(200).json(await getEntries(game));
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

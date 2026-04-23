@@ -3649,3 +3649,448 @@ body {
   .karate-hud-name { max-width: 90px; font-size: 0.65rem; }
   .karate-controls-hint { display: none; }
 }
+
+/* ========== FORTUNE TELLER ========== */
+.fortune-section { max-width: 700px; }
+
+.fortune-teller-card {
+  background: radial-gradient(ellipse at 50% 0%, #2a004a 0%, #0d001a 70%);
+  border: 2px solid rgba(160, 80, 255, 0.35);
+  border-radius: 32px;
+  overflow: hidden;
+  padding: 0 2rem 3rem;
+  position: relative;
+  text-align: center;
+}
+
+.fortune-teller-card::before {
+  background: radial-gradient(circle, rgba(140,0,255,0.18), transparent 70%);
+}
+
+/* drape */
+.fortune-drape {
+  width: calc(100% + 4rem);
+  margin: 0 -2rem 2rem;
+  line-height: 0;
+}
+.fortune-drape svg { width: 100%; height: 60px; display: block; }
+
+/* title */
+.fortune-title {
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffd700, #c86fff, #ffd700);
+  background-size: 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: fortune-shimmer-text 4s linear infinite;
+  margin-bottom: 0.4rem;
+}
+@keyframes fortune-shimmer-text {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.fortune-subtitle {
+  color: rgba(210, 170, 255, 0.7);
+  font-size: 0.95rem;
+  margin-bottom: 2.5rem;
+}
+
+/* ambient stars */
+.fortune-stars-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fortune-stars-bg span {
+  position: absolute;
+  width: 3px; height: 3px;
+  background: #fff;
+  border-radius: 50%;
+  animation: fortune-star-twinkle var(--d, 3s) ease-in-out infinite var(--delay, 0s);
+  opacity: 0;
+}
+.fortune-stars-bg span:nth-child(1)  { top:8%;  left:7%;  --d:2.5s; --delay:0s; }
+.fortune-stars-bg span:nth-child(2)  { top:15%; left:88%; --d:3.2s; --delay:0.4s; }
+.fortune-stars-bg span:nth-child(3)  { top:5%;  left:50%; --d:2.8s; --delay:0.8s; }
+.fortune-stars-bg span:nth-child(4)  { top:20%; left:20%; --d:3.6s; --delay:0.2s; }
+.fortune-stars-bg span:nth-child(5)  { top:12%; left:72%; --d:2.2s; --delay:1.1s; }
+.fortune-stars-bg span:nth-child(6)  { top:78%; left:10%; --d:3.0s; --delay:0.6s; }
+.fortune-stars-bg span:nth-child(7)  { top:85%; left:90%; --d:2.7s; --delay:0.3s; }
+.fortune-stars-bg span:nth-child(8)  { top:70%; left:55%; --d:3.4s; --delay:0.9s; }
+.fortune-stars-bg span:nth-child(9)  { top:90%; left:35%; --d:2.4s; --delay:1.5s; }
+.fortune-stars-bg span:nth-child(10) { top:60%; left:80%; --d:2.9s; --delay:0.5s; }
+.fortune-stars-bg span:nth-child(11) { top:30%; left:5%;  --d:3.1s; --delay:1.2s; }
+.fortune-stars-bg span:nth-child(12) { top:45%; left:95%; --d:2.6s; --delay:0.7s; }
+.fortune-stars-bg span:nth-child(13) { top:55%; left:25%; --d:3.3s; --delay:1.8s; }
+.fortune-stars-bg span:nth-child(14) { top:38%; left:65%; --d:2.1s; --delay:2.0s; }
+.fortune-stars-bg span:nth-child(15) { top:25%; left:42%; --d:3.7s; --delay:0.1s; }
+@keyframes fortune-star-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50%       { opacity: 0.9; transform: scale(1.4); }
+}
+
+/* crystal ball */
+.fortune-ball-wrap {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+
+.fortune-ball {
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%,
+    rgba(200,140,255,0.6) 0%,
+    rgba(100,0,200,0.85) 40%,
+    rgba(30,0,60,0.95) 80%
+  );
+  box-shadow:
+    0 0 40px rgba(160,80,255,0.5),
+    0 0 80px rgba(120,0,255,0.3),
+    inset 0 0 30px rgba(0,0,0,0.5);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: fortune-ball-pulse 4s ease-in-out infinite;
+  margin: 0 auto;
+}
+.fortune-ball-wrap:hover .fortune-ball {
+  transform: scale(1.07);
+  box-shadow:
+    0 0 60px rgba(180,100,255,0.7),
+    0 0 120px rgba(140,0,255,0.4),
+    inset 0 0 30px rgba(0,0,0,0.4);
+}
+@keyframes fortune-ball-pulse {
+  0%, 100% { box-shadow: 0 0 40px rgba(160,80,255,0.5), 0 0 80px rgba(120,0,255,0.3), inset 0 0 30px rgba(0,0,0,0.5); }
+  50%       { box-shadow: 0 0 60px rgba(200,120,255,0.7), 0 0 110px rgba(160,40,255,0.4), inset 0 0 30px rgba(0,0,0,0.5); }
+}
+
+/* mist swirls */
+.fortune-mist {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.fortune-mist-1 {
+  width: 110%; height: 110%;
+  top: -5%; left: -5%;
+  background: radial-gradient(ellipse at 50% 60%, rgba(160,80,255,0.25), transparent 65%);
+  animation: fortune-mist-spin 8s linear infinite;
+}
+.fortune-mist-2 {
+  width: 90%; height: 90%;
+  top: 5%; left: 5%;
+  background: radial-gradient(ellipse at 40% 40%, rgba(80,200,255,0.15), transparent 60%);
+  animation: fortune-mist-spin 12s linear infinite reverse;
+}
+.fortune-mist-3 {
+  width: 70%; height: 70%;
+  top: 15%; left: 15%;
+  background: radial-gradient(ellipse at 60% 55%, rgba(255,180,80,0.1), transparent 60%);
+  animation: fortune-mist-spin 6s linear infinite;
+}
+@keyframes fortune-mist-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* floating inner symbols */
+.fortune-inner-symbols {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  gap: 2px;
+}
+.fortune-inner-symbols span {
+  animation: fortune-float var(--fd, 3s) ease-in-out infinite var(--fdelay, 0s);
+  opacity: 0.7;
+  display: inline-block;
+}
+.fortune-inner-symbols span:nth-child(1) { --fd:3.2s; --fdelay:0s; }
+.fortune-inner-symbols span:nth-child(2) { --fd:2.8s; --fdelay:0.5s; }
+.fortune-inner-symbols span:nth-child(3) { --fd:3.6s; --fdelay:1s; }
+.fortune-inner-symbols span:nth-child(4) { --fd:3.0s; --fdelay:1.5s; }
+@keyframes fortune-float {
+  0%, 100% { transform: translateY(0px) scale(1); opacity: 0.5; }
+  50%       { transform: translateY(-6px) scale(1.15); opacity: 0.9; }
+}
+
+/* glare highlights */
+.fortune-glare-1 {
+  position: absolute;
+  top: 12%; left: 18%;
+  width: 35%; height: 22%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.45), transparent 70%);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+  pointer-events: none;
+}
+.fortune-glare-2 {
+  position: absolute;
+  top: 55%; left: 55%;
+  width: 18%; height: 10%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.2), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ball base */
+.fortune-base {
+  width: 90px;
+  height: 22px;
+  background: linear-gradient(to bottom, #4a0080, #1a0030);
+  border-radius: 0 0 50px 50px;
+  margin: 0 auto;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  position: relative;
+}
+.fortune-base-ring {
+  position: absolute;
+  top: -4px; left: 50%;
+  transform: translateX(-50%);
+  width: 100px; height: 12px;
+  background: linear-gradient(to right, #2d0050, #9b30ff, #ffd700, #9b30ff, #2d0050);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(160,80,255,0.6);
+}
+
+/* pulse ring on hover */
+.fortune-pulse-ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -60%);
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  border: 2px solid rgba(180,100,255,0.5);
+  pointer-events: none;
+  opacity: 0;
+}
+.fortune-ball-wrap:hover .fortune-pulse-ring {
+  animation: fortune-pulse-expand 1s ease-out infinite;
+}
+@keyframes fortune-pulse-expand {
+  0%   { opacity: 0.8; transform: translate(-50%, -60%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(1.5); }
+}
+
+/* shaking state */
+.fortune-ball.fortune-shaking {
+  animation: fortune-shake 0.5s ease-in-out;
+}
+@keyframes fortune-shake {
+  0%,100% { transform: rotate(0deg); }
+  20%     { transform: rotate(-8deg) scale(1.05); }
+  40%     { transform: rotate(8deg) scale(1.08); }
+  60%     { transform: rotate(-6deg) scale(1.06); }
+  80%     { transform: rotate(5deg) scale(1.04); }
+}
+
+/* glowing state after reveal */
+.fortune-ball.fortune-glowing {
+  animation: fortune-ball-glow 2s ease-in-out infinite;
+}
+@keyframes fortune-ball-glow {
+  0%,100% { box-shadow: 0 0 50px rgba(200,150,255,0.7), 0 0 100px rgba(160,80,255,0.4); }
+  50%     { box-shadow: 0 0 80px rgba(255,200,100,0.6), 0 0 140px rgba(200,120,255,0.5); }
+}
+
+/* reveal text */
+.fortune-reveal {
+  margin: 1.5rem auto 1.5rem;
+  max-width: 500px;
+  padding: 1.2rem 1.5rem;
+  background: rgba(80, 0, 140, 0.4);
+  border: 1px solid rgba(200, 150, 255, 0.3);
+  border-radius: 18px;
+  backdrop-filter: blur(8px);
+  animation: fortune-reveal-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes fortune-reveal-in {
+  from { opacity: 0; transform: scale(0.8) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.fortune-reveal-emoji {
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+  animation: fortune-emoji-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+@keyframes fortune-emoji-pop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+.fortune-reveal-text {
+  color: #e8d0ff;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* buttons */
+.fortune-cta-btn {
+  margin-top: 0.5rem;
+}
+.fortune-again-btn {
+  display: block;
+  margin: 0.75rem auto 0;
+  background: none;
+  border: 1px solid rgba(180,100,255,0.5);
+  color: rgba(210,170,255,0.8);
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.fortune-again-btn:hover {
+  background: rgba(120,40,200,0.3);
+  color: #fff;
+  border-color: rgba(200,140,255,0.8);
+}
+
+/* fortune scene layout */
+.fortune-scene {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.fortune-witch {
+  flex-shrink: 0;
+  animation: fortune-witch-sway 4s ease-in-out infinite;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 0 12px rgba(160,80,255,0.5));
+}
+@keyframes fortune-witch-sway {
+  0%,100% { transform: rotate(-3deg); }
+  50%      { transform: rotate(3deg); }
+}
+.fortune-witch-star {
+  animation: fortune-star-twinkle 2s ease-in-out infinite;
+}
+
+/* hide old cta btn if still present */
+.fortune-cta-btn { display: none !important; }
+
+/* fortune scene: witch behind ball */
+.fortune-scene {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 260px;
+  margin-bottom: 1.5rem;
+}
+
+.fortune-witch {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.22;
+  filter: drop-shadow(0 0 18px rgba(160,80,255,0.4));
+  animation: fortune-witch-sway 5s ease-in-out infinite;
+  transform-origin: bottom center;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes fortune-witch-sway {
+  0%,100% { transform: translateX(-50%) rotate(-2deg); }
+  50%      { transform: translateX(-50%) rotate(2deg); }
+}
+
+.fortune-ball-wrap {
+  position: relative;
+  z-index: 1;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.fortune-ball {
+  width: 210px;
+  height: 210px;
+}
+
+.fortune-base {
+  width: 118px;
+}
+
+.fortune-pulse-ring {
+  width: 210px;
+  height: 210px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+}
+.fortune-ball-wrap:hover .fortune-pulse-ring {
+  animation: fortune-pulse-expand 1s ease-out infinite;
+}
+@keyframes fortune-pulse-expand {
+  0%   { opacity: 0.8; transform: translate(-50%, -55%) scale(1); }
+  100% { opacity: 0;   transform: translate(-50%, -55%) scale(1.5); }
+}
+
+/* hint text */
+.fortune-hint {
+  font-style: italic;
+  color: rgba(200, 160, 255, 0.55);
+  font-size: 0.88rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+  letter-spacing: 0.01em;
+}
+
+/* fortune scene: flex row, witch beside ball */
+.fortune-scene {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  gap: 1.5rem !important;
+  min-height: unset !important;
+  position: static !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.fortune-witch {
+  position: static !important;
+  transform: none !important;
+  opacity: 0.45 !important;
+  flex-shrink: 0;
+  animation: fortune-witch-sway2 5s ease-in-out infinite;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 0 14px rgba(160,80,255,0.5));
+}
+@keyframes fortune-witch-sway2 {
+  0%,100% { transform: rotate(-3deg); }
+  50%      { transform: rotate(3deg); }
+}
+
+/* fortune ball bigger + centered */
+.fortune-ball-wrap { display: block; margin: 0 auto; }
+.fortune-ball { width: 220px; height: 220px; }
+.fortune-pulse-ring { width: 220px; height: 220px; }
+
+/* hint text */
+.fortune-hint {
+  font-style: italic;
+  color: rgba(200, 160, 255, 0.55);
+  font-size: 0.88rem;
+  margin: 1rem 0 1.5rem;
+}
+
+/* hide removed elements */
+.fortune-scene { display: contents; }
+.fortune-witch { display: none; }
+.fortune-again-btn { display: none !important; }

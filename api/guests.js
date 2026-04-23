@@ -1,21 +1,17 @@
-const BIN_ID = '69d75c89aaba882197dc5ee2';
-const MASTER_KEY = '$2a$10$v2j06aVyWZMNAkxaPsNA7uligf2reBc/zHjnH0ULm6hshQJNs8GZ2';
-const BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://aqleksrbvrqueaqgsavk.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxbGVrc3JidnJxdWVhcWdzYXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NDg4MjUsImV4cCI6MjA5MjUyNDgyNX0.r2YsdGGc-Rz4rX3p1fIPlTXMGdvAWB7mQNZ5kE7UEL0';
 
-async function readBin() {
-  const res = await fetch(BASE + '/latest', {
-    headers: { 'X-Master-Key': MASTER_KEY },
-  });
-  const data = await res.json();
-  return data.record || {};
-}
+const headers = {
+  'apikey': SUPABASE_ANON_KEY,
+  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+  'Content-Type': 'application/json',
+};
 
-async function writeGuests(record, guests) {
-  await fetch(BASE, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
-    body: JSON.stringify({ ...record, guests }),
-  });
+async function getGuests() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/guests?select=name&order=created_at.asc`, { headers });
+  if (!res.ok) throw new Error(await res.text());
+  const rows = await res.json();
+  return rows.map(r => r.name);
 }
 
 export default async function handler(req, res) {
@@ -27,11 +23,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const record = await readBin();
-    const guests = record.guests || [];
-
     if (req.method === 'GET') {
-      return res.status(200).json(guests);
+      return res.status(200).json(await getGuests());
     }
 
     const body = req.body || {};
@@ -39,24 +32,32 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const name = (typeof body.name === 'string' ? body.name : '').trim().slice(0, 40);
       if (!name) return res.status(400).json({ error: 'Invalid name' });
-      if (!guests.includes(name)) {
-        guests.push(name);
-        await writeGuests(record, guests);
-      }
-      return res.status(200).json(guests);
+
+      // upsert — ignore conflict on unique name
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/guests`, {
+        method: 'POST',
+        headers: { ...headers, 'Prefer': 'resolution=ignore-duplicates' },
+        body: JSON.stringify({ name }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return res.status(200).json(await getGuests());
     }
 
     if (req.method === 'DELETE') {
       const { name, password } = body;
       if (password !== 'gabi') return res.status(403).json({ error: 'wrong_password' });
-      const updated = guests.filter(g => g !== name);
-      await writeGuests(record, updated);
-      return res.status(200).json(updated);
+      const encodedName = encodeURIComponent(name);
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/guests?name=eq.${encodedName}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return res.status(200).json(await getGuests());
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (e) {
-    console.error('handler error:', e);
+    console.error('guests handler error:', e);
     return res.status(500).json({ error: String(e) });
   }
 }
