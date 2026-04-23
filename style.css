@@ -1765,28 +1765,23 @@ body {
   position: relative;
   background: linear-gradient(180deg, rgba(20,10,40,0.95) 0%, rgba(10,5,25,1) 100%);
   padding: 0 0 3rem;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
-/* Rope SVG */
-.pw-rope-wrap {
-  position: relative;
-  width: 100%;
-  height: 50px;
+/* Rope: absolute horizontal twine across full section width, doesn't scroll */
+.pw-rope-line {
+  position: absolute;
+  top: 14px; /* aligns to clip top — same as track padding-top */
+  left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(180deg, #a07820 0%, #6b4e10 60%, #8b6218 100%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.7), 0 1px 0 rgba(255,220,100,0.2);
+  z-index: 10;
   pointer-events: none;
-  z-index: 2;
-}
-.pw-rope-svg {
-  width: 100%; height: 100%;
-}
-.pw-rope-path {
-  fill: none;
-  stroke: #8B6914;
-  stroke-width: 3;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
 }
 
-/* Scrollable track */
+/* Scrollable track — padding-top creates space so clips sit ON the rope */
 .pw-clothesline-track {
   display: flex;
   flex-direction: row;
@@ -1794,12 +1789,14 @@ body {
   gap: 2.5rem;
   overflow-x: auto;
   overflow-y: visible;
-  padding: 0 2.5rem 2rem;
+  padding: 14px 3rem 2.5rem; /* 14px = half clip height, aligns clip top to rope */
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.15) transparent;
   cursor: grab;
   user-select: none;
   -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 5;
 }
 .pw-clothesline-track:active { cursor: grabbing; }
 .pw-clothesline-track::-webkit-scrollbar { height: 4px; }
@@ -1807,49 +1804,46 @@ body {
 
 .pw-wall-empty {
   color: var(--text-dim); font-size: 0.9rem; text-align: center;
-  padding: 3rem 4rem; white-space: nowrap;
+  padding: 2rem 4rem; white-space: nowrap; align-self: center;
 }
 
-/* Each hanging photo */
+/* Each hanging photo — pivot at very top (clip top) */
 .pw-photo-hanger {
   display: flex;
   flex-direction: column;
   align-items: center;
   flex-shrink: 0;
-  transform-origin: top center;
+  transform-origin: 50% 0%;
   will-change: transform;
-  /* JS drives transform directly; transition only used for settle via .pw-settling class */
-}
-.pw-photo-hanger.pw-settling {
-  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Clip */
+/* Clip: two-jaw clothespeg shape */
 .pw-clip {
-  width: 16px;
-  height: 28px;
+  width: 20px;
+  height: 32px;
   position: relative;
-  margin-bottom: -4px;
+  flex-shrink: 0;
   z-index: 3;
 }
+/* Top jaw — grips the rope */
 .pw-clip::before {
   content: '';
   position: absolute;
   top: 0; left: 50%; transform: translateX(-50%);
-  width: 10px; height: 18px;
-  background: #bbb;
-  border-radius: 2px 2px 0 0;
-  box-shadow: inset -2px 0 0 rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.4);
+  width: 20px; height: 16px;
+  background: linear-gradient(180deg, #d4d4d4 0%, #aaa 100%);
+  border-radius: 3px 3px 0 0;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2), 0 -1px 0 rgba(255,255,255,0.4);
 }
+/* Bottom jaw — pinch arm */
 .pw-clip::after {
   content: '';
   position: absolute;
-  bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 16px; height: 12px;
-  background: #999;
-  border-radius: 0 0 3px 3px;
-  clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  top: 12px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 20px;
+  background: linear-gradient(180deg, #bbb 0%, #888 100%);
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.45);
 }
 
 /* Photo card */
