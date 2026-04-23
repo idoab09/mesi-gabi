@@ -7,6 +7,27 @@
   --lime: #A3FF00;
   --bg: #0D0020;
   --card: #1A0035;
+
+  /* Font sizes */
+  --fs-section-title: clamp(1.8rem, 6vw, 3rem);
+  --fs-section-subtitle: 0.9rem;
+  --fs-body: 1rem;
+  --fs-small: 0.85rem;
+
+  /* Spacing */
+  --section-pad: 2rem 1rem 4rem;
+  --card-pad: 2.5rem 2rem;
+  --card-radius: 32px;
+  --gap-sm: 0.5rem;
+  --gap-md: 1rem;
+  --gap-lg: 2rem;
+
+  /* Opacity text helpers */
+  --text-muted: rgba(255,255,255,0.45);
+  --text-dim: rgba(255,255,255,0.3);
+
+  /* Transition */
+  --transition: 0.2s ease;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -174,7 +195,7 @@ body {
   border: none;
   cursor: pointer;
   text-decoration: none;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform var(--transition), box-shadow var(--transition);
   box-shadow: 0 0 30px rgba(255,45,122,0.5);
 }
 
@@ -240,13 +261,52 @@ body {
 }
 
 .section-title {
-  font-size: clamp(1.8rem, 6vw, 3rem);
+  font-size: var(--fs-section-title);
   font-weight: 900;
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+/* Gradient on the text span only — keeps emoji colors intact */
+.section-title .section-text {
   background: linear-gradient(135deg, var(--yellow), var(--teal));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Emojis are NOT inside a clip context so they render in full color */
+.section-title .section-emoji {
+  -webkit-text-fill-color: initial;
+  color: inherit;
+}
+
+/* Section subtitle — replaces all inline-styled subtitle paragraphs */
+.section-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-section-subtitle);
+  margin-bottom: var(--gap-lg);
+}
+
+/* Card titles (info-card h2 equivalents) */
+.card-title {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  font-weight: 900;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.card-title .section-text {
+  background: linear-gradient(135deg, var(--pink), var(--yellow));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.card-title .section-emoji {
+  -webkit-text-fill-color: initial;
+  color: inherit;
 }
 
 .animals-parade {
@@ -402,7 +462,7 @@ body {
 
 /* ===== MINIGAMES SECTION ===== */
 .games-section {
-  padding: 2rem 1rem 4rem;
+  padding: var(--section-pad);
   max-width: 900px;
   margin: 0 auto;
 }
@@ -603,14 +663,18 @@ body {
 .info-section {
   max-width: 700px;
   margin: 0 auto;
-  padding: 2rem 1rem 4rem;
+  padding: var(--section-pad);
+}
+
+.section-no-top-pad {
+  padding-top: 0 !important;
 }
 
 .info-card {
   background: var(--card);
   border: 2px solid rgba(255,255,255,0.1);
-  border-radius: 32px;
-  padding: 2.5rem 2rem;
+  border-radius: var(--card-radius);
+  padding: var(--card-pad);
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -628,7 +692,8 @@ body {
   pointer-events: none;
 }
 
-.info-card h2 {
+/* Legacy .info-card h2 without .card-title — keep gradient for backward compat */
+.info-card h2:not(.card-title) {
   font-size: clamp(1.8rem, 6vw, 2.8rem);
   font-weight: 900;
   background: linear-gradient(135deg, var(--pink), var(--yellow));
@@ -749,7 +814,7 @@ body {
 }
 
 .noticeboard-empty {
-  color: rgba(255,255,255,0.3);
+  color: var(--text-dim);
   font-size: 0.9rem;
   text-align: center;
   padding: 1rem 0;
@@ -778,7 +843,7 @@ body {
 
 .notice-date {
   font-size: 0.72rem;
-  color: rgba(255,255,255,0.3);
+  color: var(--text-dim);
 }
 
 .notice-text {
@@ -817,17 +882,16 @@ body {
 
 /* ===== INVITE CARD GENERATOR ===== */
 .card-gen-section {
-  padding: 2rem 1rem 4rem;
+  padding: var(--section-pad);
   max-width: 700px;
   margin: 0 auto;
 }
 
 .card-gen-subtitle {
   text-align: center;
-  color: rgba(255,255,255,0.45);
-  font-size: 0.9rem;
-  margin-top: -1rem;
-  margin-bottom: 2rem;
+  color: var(--text-muted);
+  font-size: var(--fs-section-subtitle);
+  margin-bottom: var(--gap-lg);
 }
 
 .card-gen-step {
@@ -920,7 +984,7 @@ body {
 
 .cg-hint {
   font-size: 0.78rem;
-  color: rgba(255,255,255,0.3);
+  color: var(--text-dim);
   margin-top: 0.5rem;
 }
 
@@ -1277,8 +1341,8 @@ body {
 
 /* ===== TRIVIA GAME ===== */
 .trivia-status {
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.45);
+  font-size: var(--fs-section-subtitle);
+  color: var(--text-muted);
   margin-bottom: 0.8rem;
   min-height: 1.4em;
 }
@@ -1402,7 +1466,7 @@ body {
   border: none;
   cursor: pointer;
   box-shadow: 0 0 30px rgba(255,107,0,0.45), 0 0 60px rgba(255,45,122,0.25);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform var(--transition), box-shadow var(--transition);
 }
 
 @keyframes outfitBtnShimmer {
@@ -1506,8 +1570,8 @@ body {
 }
 
 .excuse-label {
-  font-size: 0.85rem;
-  color: rgba(255,255,255,0.45);
+  font-size: var(--fs-small);
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -1630,7 +1694,7 @@ body {
   min-width: 0;
 }
 .lb-name-input:focus { border-color: var(--yellow); }
-.lb-name-input::placeholder { color: rgba(255,255,255,0.3); }
+.lb-name-input::placeholder { color: var(--text-dim); }
 
 .lb-submit-btn {
   background: var(--yellow);
@@ -1647,12 +1711,134 @@ body {
 }
 .lb-submit-btn:hover { transform: scale(1.04); opacity: 0.9; }
 
+/* ===== PHOTO WALL ===== */
+.photo-wall-card { padding: 2rem; }
+
+/* Upload form */
+.pw-form-title { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 1.2rem; }
+.pw-drop-zone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.5rem; border: 2px dashed rgba(255,255,255,0.25); border-radius: 16px;
+  padding: 2rem; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  background: rgba(255,255,255,0.03); min-height: 140px;
+}
+.pw-drop-zone:hover, .pw-drop-zone.dragover {
+  border-color: var(--pink); background: rgba(255,45,122,0.07);
+}
+.pw-drop-icon { font-size: 2.5rem; }
+.pw-drop-text { color: rgba(255,255,255,0.55); font-size: 0.9rem; text-align: center; line-height: 1.5; }
+.pw-drop-text span { font-size: 0.78rem; color: var(--text-dim); }
+
+.pw-crop-wrap { margin-bottom: 1.2rem; }
+.pw-crop-preview-wrap {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.7rem;
+}
+.pw-crop-preview-wrap img {
+  width: 180px; height: 180px; object-fit: cover; border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.2);
+}
+.pw-crop-overlay {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.55); color: #fff; font-size: 0.7rem; padding: 2px 8px;
+  border-radius: 8px; pointer-events: none;
+}
+.pw-retake-btn { font-size: 0.8rem; padding: 0.3rem 1rem; }
+
+.pw-section-label { color: rgba(255,255,255,0.5); font-size: 0.8rem; margin-bottom: 0.5rem; }
+
+.pw-frame-picker { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.2rem; }
+.pw-frame-btn {
+  background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.7); border-radius: 20px; padding: 0.35rem 0.9rem;
+  font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
+}
+.pw-frame-btn:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+.pw-frame-btn.active { background: var(--pink); border-color: var(--pink); color: #fff; }
+
+.pw-submit-btn { width: 100%; font-size: 0.95rem; padding: 0.7rem; margin-top: 0.3rem; }
+.pw-upload-status { min-height: 1.4em; font-size: 0.85rem; color: rgba(255,100,100,0.9); margin-top: 0.5rem; text-align: center; }
+
+/* Wall grid */
+.pw-wall-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+.pw-wall-empty { color: var(--text-dim); font-size: 0.9rem; text-align: center; padding: 2rem; grid-column: 1/-1; }
+
+/* Photo item base */
+.pw-photo-item {
+  display: flex; flex-direction: column; align-items: center;
+  cursor: default; transition: transform 0.2s;
+}
+.pw-photo-item:hover { transform: scale(1.03) rotate(-0.5deg); }
+.pw-photo-inner { width: 100%; aspect-ratio: 1/1; overflow: hidden; }
+.pw-photo-inner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pw-photo-caption {
+  font-size: 0.78rem; color: rgba(255,255,255,0.75); text-align: center;
+  margin-top: 0.4rem; padding: 0 0.3rem; line-height: 1.3;
+}
+.pw-photo-uploader { font-size: 0.7rem; color: rgba(255,255,255,0.35); margin-top: 0.2rem; }
+
+/* === FRAMES === */
+
+/* Polaroid */
+.pw-frame-polaroid .pw-photo-inner {
+  background: #fff; padding: 8px 8px 32px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.pw-frame-polaroid .pw-photo-caption { color: #333; font-family: 'Heebo', sans-serif; }
+
+/* Glitter purple */
+.pw-frame-glitter .pw-photo-inner {
+  padding: 6px;
+  background: linear-gradient(135deg, #b44fff, #ff44cc, #7c3aed, #ff9de2, #b44fff);
+  background-size: 300% 300%;
+  animation: glitter-shift 3s ease infinite;
+  box-shadow: 0 0 18px rgba(180,80,255,0.6);
+}
+@keyframes glitter-shift {
+  0%,100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* Gold */
+.pw-frame-gold .pw-photo-inner {
+  padding: 6px;
+  background: linear-gradient(135deg, #ffd700, #ffaa00, #ffe566, #b8860b, #ffd700);
+  box-shadow: 0 0 18px rgba(255,200,0,0.5), inset 0 0 4px rgba(255,255,255,0.3);
+}
+
+/* Neon pink */
+.pw-frame-neon .pw-photo-inner {
+  padding: 5px;
+  background: #ff2d7a;
+  box-shadow: 0 0 14px #ff2d7a, 0 0 30px rgba(255,45,122,0.5);
+}
+
+/* Retro orange */
+.pw-frame-retro .pw-photo-inner {
+  padding: 7px 7px 28px;
+  background: #ff6b00;
+  box-shadow: 4px 4px 0 #000;
+  border: 2px solid #000;
+  image-rendering: pixelated;
+}
+
+/* Duck yellow */
+.pw-frame-duck .pw-photo-inner {
+  padding: 6px;
+  background: #FFD600;
+  box-shadow: 0 0 0 3px #ff9800, 0 4px 16px rgba(255,150,0,0.4);
+}
+
 /* ===== FOOTER ===== */
 .party-footer {
   text-align: center;
   padding: 2rem 1rem;
-  color: rgba(255,255,255,0.3);
-  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-size: var(--fs-small);
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 
@@ -3062,7 +3248,7 @@ body {
 }
 .booth-coin-slot-label {
   font-size: 0.65rem;
-  color: rgba(255,255,255,0.3);
+  color: var(--text-dim);
   font-family: 'Heebo', sans-serif;
   letter-spacing: 1px;
 }
@@ -3081,7 +3267,7 @@ body {
 }
 .booth-print-slot-label {
   font-size: 0.65rem;
-  color: rgba(255,255,255,0.3);
+  color: var(--text-dim);
   font-family: 'Heebo', sans-serif;
   letter-spacing: 2px;
 }
@@ -3657,7 +3843,6 @@ body {
   background: radial-gradient(ellipse at 50% 0%, #2a004a 0%, #0d001a 70%);
   border: 2px solid rgba(160, 80, 255, 0.35);
   border-radius: 32px;
-  overflow: hidden;
   padding: 0 2rem 3rem;
   position: relative;
   text-align: center;
@@ -3672,6 +3857,8 @@ body {
   width: calc(100% + 4rem);
   margin: 0 -2rem 2rem;
   line-height: 0;
+  overflow: hidden;
+  border-radius: 32px 32px 0 0;
 }
 .fortune-drape svg { width: 100%; height: 60px; display: block; }
 
@@ -3679,13 +3866,22 @@ body {
 .fortune-title {
   font-size: clamp(1.8rem, 6vw, 2.6rem);
   font-weight: 900;
+  margin-bottom: 0.4rem;
+}
+
+/* Gradient on the text span — emoji stays colored */
+.fortune-title .section-text {
   background: linear-gradient(135deg, #ffd700, #c86fff, #ffd700);
   background-size: 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: fortune-shimmer-text 4s linear infinite;
-  margin-bottom: 0.4rem;
+}
+
+.fortune-title .section-emoji {
+  -webkit-text-fill-color: initial;
+  color: inherit;
 }
 @keyframes fortune-shimmer-text {
   0%   { background-position: 0% 50%; }
@@ -3760,11 +3956,14 @@ body {
   margin: 0 auto;
 }
 .fortune-ball-wrap:hover .fortune-ball {
-  transform: scale(1.07);
+  transform: scale(1.04);
   box-shadow:
-    0 0 60px rgba(180,100,255,0.7),
-    0 0 120px rgba(140,0,255,0.4),
+    0 0 50px rgba(180,100,255,0.6),
+    0 0 90px rgba(140,0,255,0.3),
     inset 0 0 30px rgba(0,0,0,0.4);
+}
+.fortune-ball-wrap:hover {
+  filter: drop-shadow(0 0 30px rgba(160,80,255,0.5));
 }
 @keyframes fortune-ball-pulse {
   0%, 100% { box-shadow: 0 0 40px rgba(160,80,255,0.5), 0 0 80px rgba(120,0,255,0.3), inset 0 0 30px rgba(0,0,0,0.5); }

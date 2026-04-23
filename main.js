@@ -1,3 +1,33 @@
+// ========== SITE DATA ==========
+// All editable content lives in data.json — load it first, then init everything.
+let D = {};
+async function loadData() {
+  const r = await fetch('/data.json');
+  D = await r.json();
+  initFromData();
+}
+
+function initFromData() {
+  // Wire up animal click messages
+  document.querySelectorAll('.animal').forEach((el, i) => {
+    el.addEventListener('click', () => {
+      showToast(D.animalMessages[i] || '🎉 יאיי!');
+      spawnSparkle(el);
+    });
+  });
+
+  // Spawn first balloon now that data is ready
+  spawnBalloon();
+  setInterval(spawnBalloon, 5000);
+
+  // Fetch remote data
+  fetchGuests();
+  fetchNoticeboard();
+  fetchPhotoWall();
+}
+
+loadData();
+
 // ========== CURSOR GLOW ==========
 const cursorGlow = document.getElementById('cursor-glow');
 let glowX = window.innerWidth / 2, glowY = window.innerHeight / 2;
@@ -65,7 +95,7 @@ function createConfetti(x, y, count = 20, burst = false) {
 }
 
 function initConfetti() {
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < 17; i++) {
     const p = createAmbientParticle();
     p.y = Math.random() * canvas.height;
     confettiParticles.push(p);
@@ -142,11 +172,11 @@ initConfetti();
 animateConfetti();
 
 // ========== FLOATING BALLOONS ==========
-const balloonEmojis = ['🎈','🎈','🎈','🎉','🎊','⭐','✨'];
 function spawnBalloon() {
+  const emojis = D.balloonEmojis || ['🎈','🎉','🎊','⭐','✨'];
   const el = document.createElement('div');
   el.className = 'balloon';
-  el.textContent = balloonEmojis[Math.floor(Math.random() * balloonEmojis.length)];
+  el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
   el.style.left = Math.random() * 90 + '%';
   const dur = Math.random() * 8 + 10;
   el.style.animationDuration = dur + 's';
@@ -155,26 +185,10 @@ function spawnBalloon() {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), (dur + 1) * 1000);
 }
-setInterval(spawnBalloon, 2000);
-spawnBalloon(); spawnBalloon(); spawnBalloon();
+// Started by initFromData() after D is loaded
 
 // ========== ANIMAL CLICK MESSAGES ==========
-const animalMessages = [
-  'גוואק! אני כבר ספרתי את הימים! 🦆',
-  'פולי רוצה קונפטי!! 🦜',
-  'צפרדע קופצת לשמחה! 🐸',
-  'הפלמינגו לובשת את הגאון הורוד! 🦩',
-  'פינגווין מביא דגים לבופה! 🐧',
-  'אריה שואג מהתרגשות! 🦁',
-  'פנדה אוכלת במבוק על הריקוד! 🐼',
-  'תמנון מגיע עם 8 מתנות! 🐙',
-];
-document.querySelectorAll('.animal').forEach((el, i) => {
-  el.addEventListener('click', () => {
-    showToast(animalMessages[i] || '🎉 יאיי!');
-    spawnSparkle(el);
-  });
-});
+// Wired by initFromData() after D is loaded
 
 // ========== TOAST ==========
 let toastTimeout;
@@ -404,13 +418,7 @@ function fireCannon() {
   createConfetti(cx, cy, 25, true);
   createConfetti(Math.random() * canvas.width, Math.random() * canvas.height / 2, 12, true);
 
-  const msgs = [
-    '💥 בום! קונפטי בכל מקום!',
-    '🎊 יאיי! המסיבה מתחילה!',
-    '🎉 עוד ועוד קונפטי!',
-    '✨ כמה יופי של קונפטי!',
-    '🌈 צבעים לכל עבר!',
-  ];
+  const msgs = D.cannonMessages || ['💥 בום!','🎊 יאיי!','🎉 קונפטי!'];
   showToast(msgs[Math.floor(Math.random() * msgs.length)]);
 
   if (cannonCount === 10) showToast('🏆 10 ירות! אתה מלך הקונפטי! 👑');
@@ -443,7 +451,7 @@ updateCountdown();
 setInterval(updateCountdown, 1000);
 
 // ========== GUEST LIST (API-backed) ==========
-const guestEmojis = ['🦆','🎉','🌟','🦩','🐸','🦜','🎊','⭐','🦁','🐼','🦋','🐧'];
+const guestEmojis = () => D.guestEmojis || ['🦆','🎉','🌟','🦩','🐸','🦜','🎊','⭐','🦁','🐼','🦋','🐧'];
 let guestList = [];
 let pendingRemoveName = null;
 
@@ -457,7 +465,7 @@ function renderGuestList() {
   }
   countLine.textContent = `🎉 ${guestList.length} אנשים מגיעים למסיבה!`;
   grid.innerHTML = guestList.map((name, i) => {
-    const emoji = guestEmojis[i % guestEmojis.length];
+    const _ge = guestEmojis(); const emoji = _ge[i % _ge.length];
     const safeName = name.replace(/"/g, '&quot;');
     return `<div class="guest-chip">${emoji} ${name}<button class="guest-chip-remove" onclick="askRemove('${safeName}')" title="הסר">✕</button></div>`;
   }).join('');
@@ -522,8 +530,6 @@ async function confirmRemove() {
 
 document.getElementById('pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') confirmRemove(); });
 document.getElementById('pw-modal').addEventListener('click', e => { if (e.target === document.getElementById('pw-modal')) closePwModal(); });
-
-fetchGuests();
 
 // ========== RSVP ==========
 let rsvpName = '';
@@ -625,10 +631,8 @@ async function postNoticeboardMessage() {
   btn.textContent = 'פרסם הודעה 📌';
 }
 
-fetchNoticeboard();
-
 // ========== MEMORY GAME ==========
-const MEMORY_EMOJIS = ['🦆','🦜','🐸','🦩','🐧','🦁','🐼','🐙'];
+const MEMORY_EMOJIS = () => D.memoryEmojis || ['🦆','🦜','🐸','🦩','🐧','🦁','🐼','🐙'];
 let memFlipped = [], memMatched = 0, memLocked = false, memScore = 0;
 let memLastScore = 0;
 
@@ -639,7 +643,7 @@ function startMemoryGame() {
   memFlipped = []; memMatched = 0; memLocked = false; memScore = 0;
   document.getElementById('memory-score').textContent = '0';
 
-  const pairs = [...MEMORY_EMOJIS, ...MEMORY_EMOJIS];
+  const _me = MEMORY_EMOJIS(); const pairs = [..._me, ..._me];
   for (let i = pairs.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
@@ -668,7 +672,7 @@ function flipCard(card) {
       document.getElementById('memory-score').textContent = memScore;
       memFlipped = [];
       memLocked = false;
-      if (memMatched === MEMORY_EMOJIS.length) {
+      if (memMatched === MEMORY_EMOJIS().length) {
         memLastScore = memScore;
         createConfetti(canvas.width/2, canvas.height/3, 25, true);
         showToast('🏆 מצאת את כל הזוגות! ' + memScore + ' נקודות!');
@@ -696,7 +700,7 @@ function flipCard(card) {
 
 // ========== WHACK-A-DUCK GAME ==========
 const WHACK_HOLES = 9;
-const WHACK_CHARS = ['🦆','🦆','🦆','🐸','🦜','🐊'];
+const WHACK_CHARS = () => D.whackChars || ['🦆','🦆','🦆','🐸','🦜','🐊'];
 let whackActive = false, whackScore = 0, whackTimeLeft = 20;
 let whackTimerInt, whackSpawnInt;
 let whackHoles = [];
@@ -758,7 +762,7 @@ function popRandomDuck() {
   const down = whackHoles.filter(h => !h.up);
   if (down.length === 0) return;
   const h = down[Math.floor(Math.random() * down.length)];
-  const char = WHACK_CHARS[Math.floor(Math.random() * WHACK_CHARS.length)];
+  const _wc = WHACK_CHARS(); const char = _wc[Math.floor(Math.random() * _wc.length)];
   h.duck.textContent = char;
   h.el.classList.remove('hit');
   h.el.classList.add('up');
@@ -924,28 +928,7 @@ async function simonPress(i) {
 }
 
 // ========== TRIVIA GAME ==========
-const TRIVIA_QUESTIONS = [
-  { q: 'איזו להקה שרה "Get Lucky"?', opts: ['Daft Punk', 'Stardust', 'Modjo', 'Justice'], a: 0 },
-  { q: 'מה שם השיר שמתחיל ב-"Do you remember..."?', opts: ['September', 'October', 'December', 'November'], a: 0 },
-  { q: 'מה קוד הלבוש למסיגבי?', opts: ['חליפת ערב', 'גי של קארטה', 'שמלת ים', 'פיג\'מה'], a: 1 },
-  { q: 'איפה מתקיימת המסיגבי?', opts: ['מיורקה', 'קפריסין', 'סנטוריני', 'מלטה'], a: 2 },
-  { q: 'מה החיה האייקונית של המסיגבי?', opts: ['🐧 פינגווין', '🦆 ברווז', '🦜 תוכי', '🐸 צפרדע'], a: 1 },
-  { q: 'באיזו שעה מתחילה המסיבה?', opts: ['20:00', '22:00', '19:00', '21:00'], a: 3 },
-  { q: 'מה השם המלא של האתר?', opts: ['גביפארטי', 'מסיגבי', 'המסיבה של גבי', 'נייט גבי'], a: 1 },
-  { q: 'כמה חיות יש בפרד החיות של האתר?', opts: ['6', '7', '8', '9'], a: 2 },
-  { q: 'באיזה תאריך מתקיימת המסיגבי?', opts: ['3 באוגוסט', '14 ביולי', '7 באוגוסט', '21 ביוני'], a: 2 },
-  { q: 'כמה חתולים יש לגבי ומאור?', opts: ['1', '2', '3', '4'], a: 2 },
-  { q: 'איזה חגורה יש לגבי בקארטה?', opts: ['חומה', 'כחולה', 'שחורה', 'ירוקה'], a: 2 },
-  { q: 'האם גבי אוכל בשר?', opts: ['לא', 'כן', 'רק עוף', 'רק בימים זוגיים'], a: 0 },
-  { q: 'איפה גבי עובד?', opts: ['גוגל', 'מיקרוסופט', 'אפל', 'אמזון'], a: 2 },
-  { q: 'מה היה השם המקורי של גבי?', opts: ['גבריאל אלחנדרו', 'פטריסיו חבייר', 'חואן קרלוס', 'דייגו מראדונה'], a: 1 },
-  { q: 'מאיזו מדינה גבי עלה?', opts: ['ברזיל', 'ספרד', 'צ\'ילה', 'ארגנטינה'], a: 3 },
-  { q: 'איך קוראים לבן של גבי?', opts: ['תום', 'רום', 'עומרי', 'גיא'], a: 1 },
-  { q: 'באיזה צבע הגיטרה החשמלית של גבי?', opts: ['שחור ולבן', 'אדום', 'כחול מטאלי', 'ירוק וזהב'], a: 3 },
-  { q: 'כמה ילדים יש לגבי?', opts: ['1', '2', '3', '4'], a: 1 },
-  { q: 'איך קוראים לחברה של גבי?', opts: ['מיכל', 'שיר', 'מאור', 'יעל'], a: 2 },
-  { q: 'באיזו עיר נמצא הדוג\'ו שגבי מלמד בו?', opts: ['תל אביב', 'רמת גן', 'גבעתיים', 'הרצליה'], a: 2 }
-];
+const TRIVIA_QUESTIONS = () => D.trivia || [];
 
 const TRIVIA_COUNT = 8;
 const TRIVIA_TIME = 12;
@@ -971,7 +954,7 @@ function startTrivia() {
   triviaActive = true;
   triviaScore = 0;
   triviaIdx = 0;
-  triviaPool = shuffleArray(TRIVIA_QUESTIONS).slice(0, TRIVIA_COUNT);
+  triviaPool = shuffleArray(TRIVIA_QUESTIONS()).slice(0, TRIVIA_COUNT);
 
   document.getElementById('trivia-score').textContent = '0';
   document.getElementById('trivia-status').style.display = 'none';
@@ -1084,14 +1067,7 @@ function endTrivia() {
 }
 
 // ========== PUBLIC LEADERBOARDS ==========
-const LB_LABELS = {
-  duck: 'ברווזים',
-  balloon: 'בלונים',
-  memory: 'נקודות',
-  whack: 'מכות',
-  simon: 'שלב',
-  trivia: 'נקודות',
-};
+const LB_LABELS = () => D.leaderboardLabels || {};
 
 function toggleLeaderboard(game) {
   const panel = document.getElementById(game + '-lb-panel');
@@ -1121,7 +1097,7 @@ function renderLeaderboard(game, entries) {
   const el = document.getElementById(game + '-lb-entries');
   if (!el) return;
   const medals = ['🥇','🥈','🥉'];
-  const label = LB_LABELS[game] || '';
+  const label = LB_LABELS()[game] || '';
   if (entries.length === 0) {
     el.innerHTML = '<div class="lb-empty">אין שיאנים עדיין — היה/י הראשון/ה!</div>';
     return;
@@ -1175,6 +1151,133 @@ async function submitScore(game) {
       showToast('🏆 הניקוד נשמר!');
     }
   } catch { showToast('שגיאת חיבור 😢'); }
+}
+
+// ========== PHOTO WALL ==========
+let pwSelectedFrame = 'polaroid';
+let pwCroppedDataUrl = null;
+
+function pwSelectFrame(btn, frame) {
+  pwSelectedFrame = frame;
+  document.querySelectorAll('.pw-frame-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function pwFileChosen(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => pwCropToSquare(ev.target.result);
+  reader.readAsDataURL(file);
+}
+
+function pwCropToSquare(dataUrl) {
+  const img = new Image();
+  img.onload = () => {
+    const size = Math.min(img.width, img.height);
+    const c = document.getElementById('pw-crop-canvas');
+    c.width = 600;
+    c.height = 600;
+    const ctx = c.getContext('2d');
+    const sx = (img.width - size) / 2;
+    const sy = (img.height - size) / 2;
+    ctx.drawImage(img, sx, sy, size, size, 0, 0, 600, 600);
+    pwCroppedDataUrl = c.toDataURL('image/jpeg', 0.85);
+    document.getElementById('pw-crop-img').src = pwCroppedDataUrl;
+    document.getElementById('pw-drop-zone').style.display = 'none';
+    document.getElementById('pw-crop-preview-wrap').style.display = 'block';
+  };
+  img.src = dataUrl;
+}
+
+function pwRetake() {
+  pwCroppedDataUrl = null;
+  document.getElementById('pw-file-input').value = '';
+  document.getElementById('pw-drop-zone').style.display = 'flex';
+  document.getElementById('pw-crop-preview-wrap').style.display = 'none';
+}
+
+(function() {
+  const zone = document.getElementById('pw-drop-zone');
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = ev => pwCropToSquare(ev.target.result);
+      reader.readAsDataURL(file);
+    }
+  });
+})();
+
+async function pwSubmit() {
+  if (!pwCroppedDataUrl) { showToast('בחר/י תמונה קודם 📷'); return; }
+  const uploader = document.getElementById('pw-uploader').value.trim();
+  if (!uploader) {
+    const inp = document.getElementById('pw-uploader');
+    inp.focus(); inp.classList.add('input-shake');
+    setTimeout(() => inp.classList.remove('input-shake'), 600);
+    return;
+  }
+  const caption = document.getElementById('pw-caption').value.trim();
+  const btn = document.getElementById('pw-submit-btn');
+  const status = document.getElementById('pw-upload-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ מעלה...';
+  status.textContent = '';
+  try {
+    const r = await fetch('/api/photos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uploader, caption, frame: pwSelectedFrame, image: pwCroppedDataUrl }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      if (data.error === 'nsfw_rejected') status.textContent = '🚫 התמונה נדחתה — תוכן לא הולם.';
+      else if (data.error === 'image_too_large') status.textContent = '📦 התמונה גדולה מדי (מקסימום 5MB).';
+      else status.textContent = '😢 שגיאה בהעלאה, נסה/י שוב.';
+      return;
+    }
+    renderPhotoWall(data);
+    pwRetake();
+    document.getElementById('pw-uploader').value = '';
+    document.getElementById('pw-caption').value = '';
+    showToast('🖼️ התמונה עלתה לקיר!');
+    createConfetti(canvas.width / 2, canvas.height / 2, 20, true);
+  } catch {
+    status.textContent = '😢 שגיאת חיבור, נסה/י שוב.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'העלה לקיר 🖼️';
+  }
+}
+
+async function fetchPhotoWall() {
+  try {
+    const r = await fetch('/api/photos');
+    if (r.ok) renderPhotoWall(await r.json());
+  } catch {}
+}
+
+function renderPhotoWall(photos) {
+  const grid = document.getElementById('pw-wall-grid');
+  if (!photos || photos.length === 0) {
+    grid.innerHTML = '<div class="pw-wall-empty">עדיין אין תמונות — היה/י הראשון/ה! 📸</div>';
+    return;
+  }
+  grid.innerHTML = photos.map(p => `
+    <div class="pw-photo-item pw-frame-${p.frame}">
+      <div class="pw-photo-inner">
+        <img src="${p.url}" alt="${escapeHtml(p.uploader)}" loading="lazy" />
+      </div>
+      ${p.caption ? `<div class="pw-photo-caption">${escapeHtml(p.caption)}</div>` : ''}
+      <div class="pw-photo-uploader">📸 ${escapeHtml(p.uploader)}</div>
+    </div>
+  `).join('');
 }
 
 // ========== CLICK ANYWHERE SPARKLE ==========
@@ -1769,137 +1872,8 @@ setTimeout(() => {
 
 // ========== INVITE CARD GENERATOR ==========
 
-const CG_PERSONALITIES = {
-  gabi: {
-    name: 'גבי',
-    title: 'הטרול החכם של אפל 🍎',
-    desc: 'אתה/י חכם/ה, מצחיק/ה, קצת טרול/ית — ועובד/ת באפל.',
-    colors: ['#1d1d1f', '#0071e3', '#f5f5f7'],
-    accent: '#0071e3',
-    bg: 'linear-gradient(135deg, #1d1d1f 0%, #0a0a0a 60%, #001a33 100%)',
-    border: '#0071e3',
-    quotes: [
-      '"אם זה לא על אייפון, אני לא מגיע"',
-      '"גם סירי לא מבינה אותי"',
-      '"באגים? אני קורא לזה פיצ\'רים"',
-      '"כן, יש לי מק. לא, אני לא אסביר כמה הוא עלה"',
-      '"אני לא טרול, אני סתם צודק"',
-      'תזכיר לי באיזה צבע החגורה שלך בקארטה?',
-    ],
-  },
-  rom: {
-    name: 'רום',
-    title: 'הגאון הישן ב-11 😴',
-    desc: 'חכם יחסית, ציונים? פחות. בנות? עוד פחות. שינה? הרבה.',
-    colors: ['#0d0020', '#7C3AED', '#FFD600'],
-    accent: '#7C3AED',
-    bg: 'linear-gradient(135deg, #0d0020 0%, #1a003a 60%, #2a0060 100%)',
-    border: '#7C3AED',
-    quotes: [
-      '"אני יכול לעשות את זה מחר"',
-      '"הציון לא מייצג את האינטליגנציה שלי"',
-      '"אני לא ישן, אני טוען אנרגיה"',
-      '"יש לי GF — Grand Future"',
-      '"טכנית לא נכשלתי, פשוט לא הצלחתי"',
-    ],
-  },
-  party_animal: {
-    name: 'חיית המסיבה',
-    title: 'המלך/ה של הרחבה 🦆',
-    desc: 'אתה/י הראשון/ה להגיע והאחרון/ה לעזוב. כל השירים שלך.',
-    colors: ['#0D0020', '#FF2D7A', '#FFD600'],
-    accent: '#FF2D7A',
-    bg: 'linear-gradient(135deg, #0D0020 0%, #2a0035 50%, #1a000f 100%)',
-    border: '#FF2D7A',
-    quotes: [
-      '"השיר הזה הוא עלי"',
-      '"הברווז הזה מייצג אותי בנפש"',
-      '"DJ תעלה את הווליום"',
-      '"אני לא עייף/ה, המסיבה עייפה"',
-      '"הגעתי ראשון/ה כי אני הכי מתרגש/ת"',
-    ],
-  },
-  philosopher: {
-    name: 'הפילוסוף/ית',
-    title: 'חושב/ת יותר מדי 🧠',
-    desc: 'שואל/ת שאלות עמוקות תוך כדי ריקוד. מגיע/ה רק כי "מעניין סוציולוגית".',
-    colors: ['#0a1a0a', '#00D4C8', '#A3FF00'],
-    accent: '#00D4C8',
-    bg: 'linear-gradient(135deg, #0a1a1a 0%, #001a1a 60%, #0a2020 100%)',
-    border: '#00D4C8',
-    quotes: [
-      '"מה זה בכלל מסיבה, אם חושבים על זה?"',
-      '"הקצב הזה מזכיר לי ניטשה"',
-      '"אני כאן רק כדי להתבונן"',
-      '"הקונפטי הזה — מטאפורה לחיים"',
-      '"טוב, אבל למה ברווז ספציפית?"',
-    ],
-  },
-  vip: {
-    name: 'ה-VIP',
-    title: 'בא/ה רק לצילום 📸',
-    desc: 'מגיע/ה מאוחר, יוצא/ת מוקדם, נראה/ית מושלם/ת כל הזמן.',
-    colors: ['#1a1000', '#FFD600', '#FF6B00'],
-    accent: '#FFD600',
-    bg: 'linear-gradient(135deg, #1a1000 0%, #2a1a00 60%, #1a0a00 100%)',
-    border: '#FFD600',
-    quotes: [
-      '"אני לא מגיע/ה, אני מופיע/ה"',
-      '"כן, הוזמנתי. לא, לא אסביר איך"',
-      '"הצלם עדיין כאן?"',
-      '"זה הצד הטוב שלי"',
-      '"כולם יזכרו את הכניסה שלי"',
-    ],
-  },
-};
-
-const CG_QUIZ = [
-  {
-    q: 'שישי בלילה — איפה אתה/י?',
-    opts: [
-      { text: 'ישן/ה. ברור.', scores: { rom: 3 } },
-      { text: 'מסיבה כמובן', scores: { party_animal: 3 } },
-      { text: 'כותב/ת קוד', scores: { gabi: 3 } },
-      { text: 'קורא/ת ומהרהר/ת', scores: { philosopher: 2, vip: 1 } },
-    ],
-  },
-  {
-    q: 'מישהו שאל אותך שאלה טיפשה. מה עושה?',
-    opts: [
-      { text: 'עונה בציניות מלאה', scores: { gabi: 3 } },
-      { text: 'מסביר/ה בסבלנות', scores: { philosopher: 2 } },
-      { text: 'ממשיך/ה לרקוד', scores: { party_animal: 2 } },
-      { text: 'מתעלם/ת כי עייף/ה', scores: { rom: 3 } },
-    ],
-  },
-  {
-    q: 'מה הסיכוי שתגיע/י בזמן למסיבה?',
-    opts: [
-      { text: 'אני מגיע/ה ראשון/ה', scores: { party_animal: 3 } },
-      { text: 'כשיהיה רצון', scores: { rom: 2, philosopher: 1 } },
-      { text: 'בדיוק בשעה — אפל מדויקת', scores: { gabi: 3 } },
-      { text: 'מאוחר — זה ה-entrance שלי', scores: { vip: 3 } },
-    ],
-  },
-  {
-    q: 'מה הפלייליסט האידיאלי?',
-    opts: [
-      { text: 'כל מה שיש בספוטיפיי של גבי', scores: { gabi: 2, party_animal: 1 } },
-      { text: 'לא אכפת לי, אני ישן/ה בכל מקרה', scores: { rom: 3 } },
-      { text: 'September על ריפיט', scores: { party_animal: 3 } },
-      { text: 'מוזיקה שמעוררת מחשבה', scores: { philosopher: 3 } },
-    ],
-  },
-  {
-    q: 'מה כתוב על החולצה שלך?',
-    opts: [
-      { text: 'Apple 🍎', scores: { gabi: 3 } },
-      { text: 'ZZZ 💤', scores: { rom: 3 } },
-      { text: '🦆 DUCK MODE', scores: { party_animal: 3 } },
-      { text: 'שאלה פילוסופית ב-7 מילים', scores: { philosopher: 2, vip: 1 } },
-    ],
-  },
-];
+const CG_PERSONALITIES = () => D.cardGen?.personalities || {};
+const CG_QUIZ = () => D.cardGen?.quiz || [];
 
 const CG_FRAMES = [
   { id: 'neon', label: 'ניאון', draw: (ctx, w, h, accent) => {
@@ -1990,7 +1964,7 @@ const CG_FRAMES = [
   }},
 ];
 
-const CG_EMOJIS = ['🦆','🍎','😴','🧠','👑','🔥','⭐','🎉','🥋','🦁','🐸','💎','🌊','⚡','🎭'];
+const CG_EMOJIS = () => D.cardGen?.emojis || ['🦆','🎉','⭐'];
 
 // State
 let cgPhotoDataUrl = null;
@@ -2092,9 +2066,10 @@ function cgRenderQuiz() {
 }
 
 function cgShowQuizQuestion(wrap) {
-  if (cgQuizStep >= CG_QUIZ.length) { cgComputePersonality(); return; }
-  const q = CG_QUIZ[cgQuizStep];
-  const total = CG_QUIZ.length;
+  const _quiz = CG_QUIZ();
+  if (cgQuizStep >= _quiz.length) { cgComputePersonality(); return; }
+  const q = _quiz[cgQuizStep];
+  const total = _quiz.length;
 
   wrap.innerHTML = `
     <div class="cg-quiz-progress">
@@ -2118,8 +2093,8 @@ function cgAnswer(optIdx) {
 
 function cgComputePersonality() {
   const totals = {};
-  Object.keys(CG_PERSONALITIES).forEach(k => totals[k] = 0);
-  CG_QUIZ.forEach((q, qi) => {
+  Object.keys(CG_PERSONALITIES()).forEach(k => totals[k] = 0);
+  CG_QUIZ().forEach((q, qi) => {
     const chosen = cgQuizAnswers[qi];
     if (chosen === undefined) return;
     const scores = q.opts[chosen].scores || {};
@@ -2131,7 +2106,7 @@ function cgComputePersonality() {
 
 // ---- CUSTOMIZE + CANVAS ----
 function cgRenderCustomize() {
-  const p = CG_PERSONALITIES[cgPersonalityKey];
+  const p = CG_PERSONALITIES()[cgPersonalityKey];
 
   // Show personality result
   document.getElementById('cg-result-personality').innerHTML = `
@@ -2155,7 +2130,7 @@ function cgRenderCustomize() {
 
   // Emoji picker
   const ep = document.getElementById('cg-emoji-picker');
-  ep.innerHTML = CG_EMOJIS.map(e =>
+  ep.innerHTML = CG_EMOJIS().map(e =>
     `<button class="cg-emoji-btn ${e === cgSelectedEmoji ? 'selected' : ''}" onclick="cgSelectEmoji('${e}')">${e}</button>`
   ).join('');
 
@@ -2198,7 +2173,7 @@ function cgDrawCard() {
   const ctx = cardCanvas.getContext('2d');
   const w = cardCanvas.width;
   const h = cardCanvas.height;
-  const p = CG_PERSONALITIES[cgPersonalityKey];
+  const p = CG_PERSONALITIES()[cgPersonalityKey];
   const frame = CG_FRAMES.find(f => f.id === cgSelectedFrame);
   const name = document.getElementById('cg-name-input').value.trim() || 'השם שלך';
 
@@ -2417,67 +2392,14 @@ function cgReset() {
 }
 
 // ========== OUTFIT GENERATOR ==========
-const OUTFIT_TOPS = [
-  { emoji: '🥋', label: 'גי לבן קלאסי' },
-  { emoji: '🥷', label: 'גי שחור של נינג\'ה' },
-  { emoji: '👕', label: 'חולצת קארטה ורודה נצנצים' },
-  { emoji: '🎽', label: 'גי עם פאצ\'ים זוהרים' },
-  { emoji: '🌈', label: 'גי ססגוני בצבעי הקשת' },
-  { emoji: '⭐', label: 'גי זהב VIP' },
-  { emoji: '🌙', label: 'גי כסוף לילה' },
-  { emoji: '🔥', label: 'גי עם להבות' },
-];
-
-const OUTFIT_BELTS = [
-  { emoji: '🟡', label: 'חגורה צהובה — מתחיל מסגנון' },
-  { emoji: '🟠', label: 'חגורה כתומה — חמאס של ריקוד' },
-  { emoji: '🔵', label: 'חגורה כחולה — מסטר וייבס' },
-  { emoji: '🟤', label: 'חגורה חומה — ספיישל אדמה' },
-  { emoji: '⚫', label: 'חגורה שחורה — דן 10 של מסיבות' },
-  { emoji: '🔴', label: 'חגורה אדומה — בוס הרצפה' },
-  { emoji: '💜', label: 'חגורה סגולה — קינג ויולט' },
-  { emoji: '✨', label: 'חגורה בלינג — גראן מאסטר' },
-];
-
-const OUTFIT_SHOES = [
-  { emoji: '👟', label: 'נעלי ספורט זוהרות' },
-  { emoji: '🥿', label: 'נעלי מסיבה שטוחות' },
-  { emoji: '👠', label: 'עקבים עם קארטה-וייב' },
-  { emoji: '🩴', label: 'כפכפים עם ניצוץ' },
-  { emoji: '👢', label: 'מגפיים של לוחם' },
-  { emoji: '🪖', label: 'בוטס קרבי — ריקוד וקרב' },
-];
-
-const OUTFIT_ACCESSORIES = [
-  { emoji: '🥷', label: 'מסכת נינג\'ה (חצי)' },
-  { emoji: '🕶️', label: 'משקפי שמש בלוגר' },
-  { emoji: '🎭', label: 'מסכת פנסייה יצירתית' },
-  { emoji: '🎩', label: 'כובע טופ-האט — כי למה לא' },
-  { emoji: '👑', label: 'כתר — אתה המלך/ה הלילה' },
-  { emoji: '🎀', label: 'קשת שיער ענקית' },
-  { emoji: '📿', label: 'שרשרת ג\'ייד' },
-  { emoji: '🌸', label: 'פרחים בשיער — קשה רך' },
-];
-
-const OUTFIT_VIBES = [
-  { emoji: '🐉', text: 'וייב: דרקון מדיטרני — מסוכן אבל רומנטי' },
-  { emoji: '🌊', text: 'וייב: לוחם האוקיינוס — קול אבל קטלני' },
-  { emoji: '🌅', text: 'וייב: שועל המדבר — חם כמו הלילה' },
-  { emoji: '⚡', text: 'וייב: ברק ביפן — מהיר ובלתי נשכח' },
-  { emoji: '🌙', text: 'וייב: שומר הלילה — מסתורי ואלגנטי' },
-  { emoji: '🔥', text: 'וייב: אש ורוח — לא אפשר לעמוד בפני' },
-  { emoji: '💎', text: 'וייב: אבן יקרה — נדיר, יקר, מושלם' },
-  { emoji: '🦋', text: 'וייב: פרפר קארטה — עדין ועוצמתי' },
-  { emoji: '🏆', text: 'וייב: אלוף עולם — פשוט כי כן' },
-  { emoji: '🎆', text: 'וייב: זיקוקי חופשיות — יפה מכדי להסביר' },
-];
-
 function generateOutfit() {
-  const top   = OUTFIT_TOPS[Math.floor(Math.random() * OUTFIT_TOPS.length)];
-  const belt  = OUTFIT_BELTS[Math.floor(Math.random() * OUTFIT_BELTS.length)];
-  const shoes = OUTFIT_SHOES[Math.floor(Math.random() * OUTFIT_SHOES.length)];
-  const acc   = OUTFIT_ACCESSORIES[Math.floor(Math.random() * OUTFIT_ACCESSORIES.length)];
-  const vibe  = OUTFIT_VIBES[Math.floor(Math.random() * OUTFIT_VIBES.length)];
+  const o = D.outfit || {};
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const top   = pick(o.tops || []);
+  const belt  = pick(o.belts || []);
+  const shoes = pick(o.shoes || []);
+  const acc   = pick(o.accessories || []);
+  const vibe  = pick(o.vibes || []);
 
   const result = document.getElementById('outfit-result');
   const grid   = document.getElementById('outfit-grid');
@@ -3906,26 +3828,9 @@ window.addEventListener('resize', () => {
 })();
 
 // ========== EXCUSE GENERATOR ==========
-const EXCUSES = [
-  "המקרר שלי עשה חרם עובדים.",
-  "נבלעתי על ידי ספה של איקאה.",
-  "הכלב אכל לי את האוטו.",
-  "בלעתי בטעות רמקול בלוטות' רועש.",
-  "שדד אותי חד-קרן חסר רחמים.",
-  "התגייסתי בטעות לצבא של נרניה.",
-  "שתיתי שיקוי ואני רואה ואינו נראה.",
-  "עכבר המחשב קם לתחייה וברח.",
-  "השמפו והמרכך דורשים הדרן במקלחת.",
-  "הפיצה שומרת עליי כבן ערובה.",
-  "החתול נתן ספין-קיק למקבוק שלי.",
-  "טים קוק מינה את החתול לבוס.",
-  "קרב קארטה עם החתול על הקידוד.",
-  "החתול פרץ לאייפון ודורש קאטות.",
-  "החתול עשה לי הפלת קארטה."
-];
-
 let lastExcuseIndex = -1;
 function generateExcuse() {
+  const EXCUSES = D.excuses || [];
   const el = document.getElementById('excuse-text');
   let idx;
   do { idx = Math.floor(Math.random() * EXCUSES.length); } while (idx === lastExcuseIndex);
@@ -3939,23 +3844,6 @@ function generateExcuse() {
 
 
 // ========== FORTUNE TELLER ==========
-const FORTUNES = [
-  { emoji: '💃', text: 'הרגליים שלך יעשו דברים שאפילו אתה/את לא ידעת שאתה/את מסוגל/ת. רצפת הריקוד תזכור את שמך.' },
-  { emoji: '🥋', text: 'קאטה של ניצחון מחכה לך הלילה. מישהו יאתגר אותך לדו קרב — וייצור לך כבוד נצחי.' },
-  { emoji: '🦆', text: 'ברווז מסתורי יהפוך לחבר הטוב ביותר שלך הלילה. יחד תגיעו לדברים גדולים.' },
-  { emoji: '🎤', text: 'הרגע שבו תאחז במיקרופון ישנה הכל. הקהל כבר מחכה. תן/י לזה לצאת.' },
-  { emoji: '🍕', text: 'פיצה מיסטית תגיע אליך בדיוק ברגע הנכון. אל תשאיר/י פרוסה לאחרים.' },
-  { emoji: '✨', text: 'אנרגיית המסיבה תתלכד סביבך. כוכב בלתי צפוי — זה אתה/את.' },
-  { emoji: '🌙', text: 'בשעה המאוחרת, רגע קסום יקפיא את הזמן. עיניים פקוחות — תראה/י אותו.' },
-  { emoji: '🎸', text: 'מוזיקה אחת תגרום לך לשכוח את כל שאר העולם. תרקוד/י כאילו אין מחר.' },
-  { emoji: '🏆', text: 'ניצחון בלתי צפוי מחכה לך — בין אם במשחק, בריקוד, או בשיחה. תהיה/י מוכן/ה.' },
-  { emoji: '💫', text: 'הלילה הזה ייכנס לאגדה. סיפורים עליו יסופרו שנים קדימה, ואתה/את תהיה/י הגיבור/ה.' },
-  { emoji: '🎉', text: 'מישהו במסיבה מחפש אותך בדיוק עכשיו. הפגישה הזו תשנה משהו קטן אבל חשוב.' },
-  { emoji: '🌈', text: 'צבעי הלילה הזה יהיו כה עזים שהזיכרון יישאר צבעוני לנצח.' },
-  { emoji: '🔥', text: 'אנרגיה לוהטת. לא תוכל/י לעצור את עצמך — ונכון שלא לנסות.' },
-  { emoji: '🎊', text: 'ריקוד ספונטני אחד יהפוך לרגע המושלם של הלילה. תן/י לגוף להחליט.' },
-  { emoji: '⭐', text: 'כישרון נסתר שלך יתגלה הלילה בפני כולם. תיהנה/י מהתשואות.' },
-];
 
 let lastFortuneIdx = -1;
 let fortuneRevealed = false;
@@ -3973,6 +3861,7 @@ function revealFortune() {
 
   setTimeout(() => {
     let idx;
+    const FORTUNES = D.fortunes || [];
     do { idx = Math.floor(Math.random() * FORTUNES.length); } while (idx === lastFortuneIdx);
     lastFortuneIdx = idx;
     const f = FORTUNES[idx];
