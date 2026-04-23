@@ -73,9 +73,40 @@ async function getPhotos() {
   }));
 }
 
+const ADMIN_PASSWORD = 'gabi';
+
+async function deletePhoto(id, password) {
+  if (password !== ADMIN_PASSWORD) return { status: 403 };
+
+  // Fetch storage_path first
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/photos?id=eq.${encodeURIComponent(id)}&select=storage_path`,
+    { headers: dbHeaders }
+  );
+  if (!r.ok) throw new Error(await r.text());
+  const rows = await r.json();
+  if (!rows.length) return { status: 404 };
+  const storagePath = rows[0].storage_path;
+
+  // Delete DB record
+  const dbDel = await fetch(
+    `${SUPABASE_URL}/rest/v1/photos?id=eq.${encodeURIComponent(id)}`,
+    { method: 'DELETE', headers: dbHeaders }
+  );
+  if (!dbDel.ok) throw new Error(await dbDel.text());
+
+  // Delete from storage (best-effort)
+  await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${storagePath}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+  }).catch(() => {});
+
+  return { status: 200 };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Cache-Control', 'no-store');
 
@@ -119,6 +150,17 @@ export default async function handler(req, res) {
       });
       if (!dbRes.ok) throw new Error(await dbRes.text());
 
+      return res.status(200).json(await getPhotos());
+    }
+
+    if (req.method === 'DELETE') {
+      const body = req.body || {};
+      const id = typeof body.id === 'string' ? body.id : String(body.id || '');
+      const password = typeof body.password === 'string' ? body.password : '';
+      if (!id) return res.status(400).json({ error: 'missing_id' });
+      const result = await deletePhoto(id, password);
+      if (result.status === 403) return res.status(403).json({ error: 'wrong_password' });
+      if (result.status === 404) return res.status(404).json({ error: 'not_found' });
       return res.status(200).json(await getPhotos());
     }
 

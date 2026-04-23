@@ -454,6 +454,7 @@ setInterval(updateCountdown, 1000);
 const guestEmojis = () => D.guestEmojis || ['🦆','🎉','🌟','🦩','🐸','🦜','🎊','⭐','🦁','🐼','🦋','🐧'];
 let guestList = [];
 let pendingRemoveName = null;
+let pendingRemovePhoto = null; // { id, uploader }
 
 function renderGuestList() {
   const grid = document.getElementById('guest-list-grid');
@@ -491,21 +492,55 @@ async function addGuest(name) {
 
 function askRemove(name) {
   pendingRemoveName = name;
-  document.getElementById('pw-removing-name').textContent = 'הסרה: ' + name;
-  document.getElementById('pw-input').value = '';
-  document.getElementById('pw-error').textContent = '';
-  const modal = document.getElementById('pw-modal');
-  modal.style.display = 'flex';
-  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+  pendingRemovePhoto = null;
+  openPwModal('הסרה: ' + name);
 }
 
 function closePwModal() {
   document.getElementById('pw-modal').style.display = 'none';
   pendingRemoveName = null;
+  pendingRemovePhoto = null;
+}
+
+function openPwModal(label) {
+  document.getElementById('pw-removing-name').textContent = label;
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').textContent = '';
+  document.getElementById('pw-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+}
+
+function askRemovePhoto(id, uploader) {
+  pendingRemovePhoto = { id, uploader };
+  pendingRemoveName = null;
+  openPwModal('הסרת תמונה: ' + uploader);
 }
 
 async function confirmRemove() {
   const pw = document.getElementById('pw-input').value;
+
+  if (pendingRemovePhoto) {
+    try {
+      const r = await fetch('/api/photos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: pendingRemovePhoto.id, password: pw }),
+      });
+      if (r.status === 403) {
+        document.getElementById('pw-error').textContent = '❌ סיסמה שגויה!';
+        document.getElementById('pw-input').value = '';
+        document.getElementById('pw-input').focus();
+        return;
+      }
+      if (r.ok) {
+        renderPhotoWall(await r.json());
+        showToast('🗑️ התמונה הוסרה');
+        closePwModal();
+      }
+    } catch { showToast('שגיאת חיבור 😢'); }
+    return;
+  }
+
   if (!pendingRemoveName) return;
   try {
     const r = await fetch('/api/guests', {
@@ -1281,11 +1316,14 @@ function renderPhotoWall(photos) {
     hanger.className = 'pw-photo-hanger';
     hanger.dataset.baseTilt = tilt;
     hanger.style.transform = `rotate(${tilt}deg)`;
+    const safeId = escapeHtml(String(p.id));
+    const safeUploader = escapeHtml(p.uploader).replace(/'/g, '\\&#39;');
     hanger.innerHTML = `
       <div class="pw-clip"></div>
       <div class="pw-photo-item pw-frame-${p.frame}">
-        <div class="pw-photo-inner">
+        <div class="pw-photo-inner" style="position:relative">
           <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.uploader)}" loading="lazy" />
+          <button class="pw-delete-btn" onclick="askRemovePhoto('${safeId}','${safeUploader}')" title="הסר תמונה">✕</button>
         </div>
         ${p.caption ? `<div class="pw-photo-caption">${escapeHtml(p.caption)}</div>` : ''}
         <div class="pw-photo-uploader">📸 ${escapeHtml(p.uploader)}</div>
@@ -2876,24 +2914,27 @@ function generateOutfit() {
 
   function pbDownload() {
     const src = getCanvas();
-    const PW = src.width;
-    const PH = src.height;
-    const BORDER = Math.round(PW * 0.07);
-    const HEADER = Math.round(PW * 0.22);
-    const FOOTER = Math.round(PW * 0.16);
-    const TW = PW + BORDER * 2;
-    const TH = PH + HEADER + FOOTER + BORDER * 2;
+    // Normalise to a fixed output width so layout is predictable regardless of webcam resolution
+    const OUT_W = 720;
+    const SCALE = OUT_W / src.width;
+    const IMG_W = OUT_W;
+    const IMG_H = Math.round(src.height * SCALE);
+    const BORDER = Math.round(OUT_W * 0.055);
+    const HEADER = Math.round(OUT_W * 0.24);
+    const FOOTER = Math.round(OUT_W * 0.20);
+    const TW = IMG_W + BORDER * 2;
+    const TH = IMG_H + HEADER + FOOTER + BORDER * 2;
 
     const out = document.createElement('canvas');
     out.width = TW;
     out.height = TH;
     const c = out.getContext('2d');
 
-    // background — white paper
+    // White paper background
     c.fillStyle = '#ffffff';
     c.fillRect(0, 0, TW, TH);
 
-    // colourful top frame band
+    // Rainbow header band
     const grad = c.createLinearGradient(0, 0, TW, 0);
     grad.addColorStop(0,   '#ff2d78');
     grad.addColorStop(0.25,'#ff9900');
@@ -2903,7 +2944,7 @@ function generateOutfit() {
     c.fillStyle = grad;
     c.fillRect(0, 0, TW, HEADER);
 
-    // bottom frame band (reversed)
+    // Rainbow footer band (reversed)
     const gradB = c.createLinearGradient(TW, 0, 0, 0);
     gradB.addColorStop(0,   '#ff2d78');
     gradB.addColorStop(0.25,'#ff9900');
@@ -2913,41 +2954,51 @@ function generateOutfit() {
     c.fillStyle = gradB;
     c.fillRect(0, TH - FOOTER, TW, FOOTER);
 
-    // side borders
+    // Side borders
     c.fillStyle = '#111';
-    c.fillRect(0, HEADER, BORDER, PH + BORDER * 2);
-    c.fillRect(TW - BORDER, HEADER, BORDER, PH + BORDER * 2);
+    c.fillRect(0,          HEADER, BORDER, IMG_H + BORDER * 2);
+    c.fillRect(TW - BORDER, HEADER, BORDER, IMG_H + BORDER * 2);
 
-    // header text — title
+    // Header — title
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    const titleSize = Math.round(HEADER * 0.38);
+    const titleSize = Math.round(HEADER * 0.36);
     c.font = `900 ${titleSize}px 'Heebo', Arial, sans-serif`;
     c.fillStyle = '#fff';
-    c.shadowColor = 'rgba(0,0,0,0.4)';
-    c.shadowBlur = 8;
-    c.fillText('מסיגבי 🎉', TW / 2, HEADER * 0.38);
+    c.shadowColor = 'rgba(0,0,0,0.45)';
+    c.shadowBlur = 10;
+    c.fillText('מסיגבי', TW / 2, HEADER * 0.35);
     c.shadowBlur = 0;
 
-    // header emojis row
-    const emojiSize = Math.round(HEADER * 0.28);
+    // Header — emoji row
+    const emojiSize = Math.round(HEADER * 0.30);
     c.font = `${emojiSize}px Arial`;
-    c.fillText('🦆 📸 🥋 🎊 🦆', TW / 2, HEADER * 0.78);
+    c.fillText('🦆 📸 🥋 🎊 🦆', TW / 2, HEADER * 0.72);
 
-    // paste photo
-    c.drawImage(src, BORDER, HEADER + BORDER, PW, PH);
+    // Photo — scaled + clipped to safe area
+    const photoX = BORDER;
+    const photoY = HEADER + BORDER;
+    c.save();
+    c.beginPath();
+    c.rect(photoX, photoY, IMG_W, IMG_H);
+    c.clip();
+    c.drawImage(src, photoX, photoY, IMG_W, IMG_H);
+    c.restore();
 
-    // footer text
-    const footerMid = TH - FOOTER / 2;
-    const subSize = Math.round(FOOTER * 0.3);
-    c.font = `900 ${subSize}px 'Heebo', Arial, sans-serif`;
+    // Footer — two lines vertically centred inside footer band
+    const footerTop = TH - FOOTER;
+    const line1Y = footerTop + FOOTER * 0.32;
+    const line2Y = footerTop + FOOTER * 0.68;
+    const subSize = Math.round(FOOTER * 0.26);
+    const tagSize = Math.round(FOOTER * 0.20);
+
     c.fillStyle = '#fff';
-    c.shadowColor = 'rgba(0,0,0,0.3)';
+    c.shadowColor = 'rgba(0,0,0,0.35)';
     c.shadowBlur = 6;
-    c.fillText('המסיבה של גבי • אוגוסט 2025', TW / 2, footerMid - subSize * 0.6);
-    const tagSize = Math.round(FOOTER * 0.22);
+    c.font = `900 ${subSize}px 'Heebo', Arial, sans-serif`;
+    c.fillText('המסיבה של גבי • אוגוסט 2025', TW / 2, line1Y);
     c.font = `${tagSize}px Arial`;
-    c.fillText('✨ 🎵 🎂 🎵 ✨', TW / 2, footerMid + subSize * 0.7);
+    c.fillText('✨ 🎵 🎂 🎵 ✨', TW / 2, line2Y);
     c.shadowBlur = 0;
 
     const a = document.createElement('a');
