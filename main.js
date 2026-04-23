@@ -1299,111 +1299,66 @@ function renderPhotoWall(photos) {
 function initClotheslineSwing(track) {
   if (track._swingCleanup) track._swingCleanup();
 
-  // Per-photo pendulum state: { angle (rad), angularVel (rad/s), baseTilt (rad) }
-  const pendulums = [];
-  const DAMPING   = 0.045;   // air resistance per frame
-  const STIFFNESS = 0.018;   // spring back to rest
-  const GRAVITY   = 9.8;
-  const LENGTH    = 0.55;    // pendulum arm length (affects natural frequency)
-  const DT        = 1 / 60;  // assume 60fps
-
-  function buildPendulums() {
-    pendulums.length = 0;
-    track.querySelectorAll('.pw-photo-hanger').forEach(h => {
-      const base = (parseFloat(h.dataset.baseTilt) || 0) * Math.PI / 180;
-      pendulums.push({ angle: base, angularVel: 0, baseTilt: base });
-    });
-  }
-
-  // Apply external impulse to all pendulums (from scroll)
-  function applyImpulse(scrollDelta) {
-    // Convert scroll px/frame → angular impulse (negative: scroll right → swing left then recoil)
-    const impulse = -scrollDelta * 0.0008;
-    pendulums.forEach((p, i) => {
-      // Slight phase delay per photo for natural stagger
-      const delay = i * 0.06;
-      p.angularVel += impulse * (1 - delay * 0.3);
-    });
-  }
-
-  let rafId = null;
-  let lastTime = null;
   let lastScrollLeft = track.scrollLeft;
+  let velocity = 0;
+  let rafId = null;
   let isPointerDown = false;
   let pointerStartX = 0;
   let scrollStartLeft = 0;
-  let lastPointerX = 0;
-  let pointerVelX = 0;
 
-  function stepPendulum(p, dt) {
-    // Damped pendulum: α = -(g/L)·sin(θ - base) - damping·ω
-    const displacement = p.angle - p.baseTilt;
-    const alpha = -(GRAVITY / LENGTH) * Math.sin(displacement) - DAMPING * p.angularVel;
-    p.angularVel += alpha * dt;
-    p.angle += p.angularVel * dt;
-    // Extra soft spring toward base to prevent drift
-    p.angle += (p.baseTilt - p.angle) * STIFFNESS;
-  }
-
-  function tick(now) {
-    const dt = lastTime ? Math.min((now - lastTime) / 1000, 0.05) : DT;
-    lastTime = now;
-
-    // Feed scroll delta as impulse
-    const scrollDelta = track.scrollLeft - lastScrollLeft;
-    lastScrollLeft = track.scrollLeft;
-    if (Math.abs(scrollDelta) > 0.5) applyImpulse(scrollDelta);
-
-    const hangers = track.querySelectorAll('.pw-photo-hanger');
-    let anyMoving = false;
-
-    pendulums.forEach((p, i) => {
-      stepPendulum(p, dt);
-      const angleDeg = p.angle * 180 / Math.PI;
-      if (hangers[i]) hangers[i].style.transform = `rotate(${angleDeg.toFixed(3)}deg)`;
-      if (Math.abs(p.angularVel) > 0.002 || Math.abs(p.angle - p.baseTilt) > 0.001) anyMoving = true;
+  function applySwing() {
+    track.querySelectorAll('.pw-photo-hanger').forEach((h, i) => {
+      const baseTilt = parseFloat(h.dataset.baseTilt) || 0;
+      const phase = (i % 3 - 1) * 0.15;
+      const angle = Math.max(-22, Math.min(22, baseTilt + velocity * (0.6 + phase)));
+      h.style.transform = `rotate(${angle}deg)`;
     });
-
-    rafId = anyMoving ? requestAnimationFrame(tick) : null;
-    if (!rafId) lastTime = null;
   }
 
-  function ensureRunning() {
-    if (!rafId) {
-      lastTime = null;
+  function setSettling(on) {
+    track.querySelectorAll('.pw-photo-hanger').forEach(h => h.classList.toggle('pw-settling', on));
+  }
+
+  function tick() {
+    const delta = track.scrollLeft - lastScrollLeft;
+    lastScrollLeft = track.scrollLeft;
+    velocity = velocity * 0.82 + delta * 0.18;
+    setSettling(false);
+    applySwing();
+    if (Math.abs(velocity) > 0.05) {
       rafId = requestAnimationFrame(tick);
+    } else {
+      velocity = 0;
+      setSettling(true);
+      applySwing();
+      rafId = null;
     }
   }
 
-  function onScroll() { ensureRunning(); }
+  function onScroll() {
+    setSettling(false);
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
 
   function onPointerDown(e) {
+    if (e.target.closest('img') || e.target.closest('.pw-photo-item')) return;
     isPointerDown = true;
     pointerStartX = e.clientX;
-    lastPointerX = e.clientX;
-    pointerVelX = 0;
     scrollStartLeft = track.scrollLeft;
     track.setPointerCapture(e.pointerId);
+    if (rafId) cancelAnimationFrame(rafId);
+    setSettling(false);
+    velocity = 0;
   }
   function onPointerMove(e) {
     if (!isPointerDown) return;
-    pointerVelX = e.clientX - lastPointerX;
-    lastPointerX = e.clientX;
-    track.scrollLeft = scrollStartLeft + (pointerStartX - e.clientX);
-    ensureRunning();
+    const dx = pointerStartX - e.clientX;
+    track.scrollLeft = scrollStartLeft + dx;
+    velocity = dx * 0.08;
+    applySwing();
   }
-  function onPointerUp() {
-    if (!isPointerDown) return;
-    isPointerDown = false;
-    // Throw: apply momentum from last pointer velocity
-    if (Math.abs(pointerVelX) > 2) {
-      applyImpulse(-pointerVelX * 1.5);
-      ensureRunning();
-    }
-  }
-
-  buildPendulums();
-  ensureRunning();
+  function onPointerUp() { isPointerDown = false; rafId = requestAnimationFrame(tick); }
 
   track.addEventListener('scroll', onScroll, { passive: true });
   track.addEventListener('pointerdown', onPointerDown);
@@ -1412,7 +1367,7 @@ function initClotheslineSwing(track) {
   track.addEventListener('pointercancel', onPointerUp);
 
   track._swingCleanup = () => {
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    if (rafId) cancelAnimationFrame(rafId);
     track.removeEventListener('scroll', onScroll);
     track.removeEventListener('pointerdown', onPointerDown);
     track.removeEventListener('pointermove', onPointerMove);

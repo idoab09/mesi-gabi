@@ -1765,23 +1765,32 @@ body {
   position: relative;
   background: linear-gradient(180deg, rgba(20,10,40,0.95) 0%, rgba(10,5,25,1) 100%);
   padding: 0 0 3rem;
-  overflow-x: hidden;
-  overflow-y: visible;
+  overflow: visible; /* allow clip ::before to overlap rope-wrap */
 }
 
-/* Rope: absolute horizontal twine across full section width, doesn't scroll */
-.pw-rope-line {
+/* Rope — absolutely positioned, sits at the top of the section */
+.pw-rope-wrap {
   position: absolute;
-  top: 14px; /* aligns to clip top — same as track padding-top */
+  top: 0;
   left: 0; right: 0;
-  height: 4px;
-  background: linear-gradient(180deg, #a07820 0%, #6b4e10 60%, #8b6218 100%);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.7), 0 1px 0 rgba(255,220,100,0.2);
-  z-index: 10;
+  height: 28px; /* clip top = 28px, rope sits at vertical center ~14px */
   pointer-events: none;
+  z-index: 4;
 }
+.pw-rope-svg {
+  width: 100%; height: 100%;
+}
+.pw-rope-path {
+  fill: none;
+  stroke: #8B6914;
+  stroke-width: 4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));
+}
+/* SVG line doesn't use fill:none, override */
+line.pw-rope-path { fill: none; }
 
-/* Scrollable track — padding-top creates space so clips sit ON the rope */
+/* Scrollable track — padding-top pushes hangers down so clip tops align with rope */
 .pw-clothesline-track {
   display: flex;
   flex-direction: row;
@@ -1789,14 +1798,12 @@ body {
   gap: 2.5rem;
   overflow-x: auto;
   overflow-y: visible;
-  padding: 14px 3rem 2.5rem; /* 14px = half clip height, aligns clip top to rope */
+  padding: 14px 2.5rem 2rem; /* 14px top = rope line y, so clip ::before tip meets rope */
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.15) transparent;
   cursor: grab;
   user-select: none;
   -webkit-overflow-scrolling: touch;
-  position: relative;
-  z-index: 5;
 }
 .pw-clothesline-track:active { cursor: grabbing; }
 .pw-clothesline-track::-webkit-scrollbar { height: 4px; }
@@ -1804,46 +1811,54 @@ body {
 
 .pw-wall-empty {
   color: var(--text-dim); font-size: 0.9rem; text-align: center;
-  padding: 2rem 4rem; white-space: nowrap; align-self: center;
+  padding: 3rem 4rem; white-space: nowrap;
 }
 
-/* Each hanging photo — pivot at very top (clip top) */
+/* Each hanging photo */
 .pw-photo-hanger {
   display: flex;
   flex-direction: column;
   align-items: center;
   flex-shrink: 0;
-  transform-origin: 50% 0%;
+  transform-origin: top center;
   will-change: transform;
+  /* JS drives transform directly; transition only used for settle via .pw-settling class */
+}
+.pw-photo-hanger.pw-settling {
+  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Clip: two-jaw clothespeg shape */
+/* Clip — sits straddling the rope line.
+   Clip total height: 32px. Rope line is at 14px from section top.
+   Hanger padding-top: 14px, so clip top aligns with rope line.
+   ::before = upper arm (above rope), ::after = lower jaw (below rope). */
 .pw-clip {
-  width: 20px;
+  width: 18px;
   height: 32px;
   position: relative;
-  flex-shrink: 0;
-  z-index: 3;
+  margin-bottom: -6px;
+  z-index: 5;
 }
-/* Top jaw — grips the rope */
+/* Upper arm — rises above the rope */
 .pw-clip::before {
   content: '';
   position: absolute;
-  top: 0; left: 50%; transform: translateX(-50%);
-  width: 20px; height: 16px;
-  background: linear-gradient(180deg, #d4d4d4 0%, #aaa 100%);
+  top: -10px; left: 50%; transform: translateX(-50%);
+  width: 8px; height: 14px;
+  background: #c8c8c8;
   border-radius: 3px 3px 0 0;
-  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2), 0 -1px 0 rgba(255,255,255,0.4);
+  box-shadow: inset -2px 0 0 rgba(0,0,0,0.2), 0 -1px 3px rgba(0,0,0,0.3);
 }
-/* Bottom jaw — pinch arm */
+/* Lower jaw — hangs below the rope, wider, clamp shape */
 .pw-clip::after {
   content: '';
   position: absolute;
-  top: 12px; left: 50%; transform: translateX(-50%);
-  width: 12px; height: 20px;
-  background: linear-gradient(180deg, #bbb 0%, #888 100%);
-  border-radius: 0 0 4px 4px;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.45);
+  top: 4px; left: 50%; transform: translateX(-50%);
+  width: 18px; height: 20px;
+  background: #aaa;
+  border-radius: 2px 2px 5px 5px;
+  clip-path: polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 /* Photo card */
