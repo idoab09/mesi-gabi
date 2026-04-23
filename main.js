@@ -2955,19 +2955,23 @@ function generateOutfit() {
     c.fillStyle = '#fff';
     c.shadowColor = 'rgba(0,0,0,0.5)';
     c.shadowBlur = 10;
+    c.direction = 'rtl';
     c.font = `900 ${Math.round(HEADER * 0.36)}px 'Heebo', Arial, sans-serif`;
     c.fillText('מסיגבי', W / 2, HEADER * 0.35);
     c.shadowBlur = 0;
+    c.direction = 'ltr';
     c.font = `${Math.round(HEADER * 0.28)}px Arial`;
     c.fillText('🦆 📸 🥋 🎊 🦆', W / 2, HEADER * 0.75);
 
-    // Footer text — proportional positions inside footer band
+    // Footer text — RTL direction, proportional positions inside footer band
     const fTop = HEADER + IMG_H;
     c.fillStyle = '#fff';
     c.shadowColor = 'rgba(0,0,0,0.4)';
     c.shadowBlur = 6;
+    c.direction = 'rtl';
     c.font = `900 ${Math.round(FOOTER * 0.26)}px 'Heebo', Arial, sans-serif`;
     c.fillText('המסיבה של גבי • אוגוסט 2025', W / 2, fTop + FOOTER * 0.33);
+    c.direction = 'ltr';
     c.font = `${Math.round(FOOTER * 0.22)}px Arial`;
     c.fillText('✨ 🎵 🎂 🎵 ✨', W / 2, fTop + FOOTER * 0.70);
     c.shadowBlur = 0;
