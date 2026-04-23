@@ -57,12 +57,22 @@ async function uploadToStorage(buffer, mimeType, filename) {
 }
 
 async function getPhotos() {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/photos?select=id,uploader,caption,frame,storage_path,created_at&order=created_at.desc&limit=50`,
-    { headers: dbHeaders }
-  );
-  if (!res.ok) throw new Error(await res.text());
-  const rows = await res.json();
+  const [photosRes, votesRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/photos?select=id,uploader,caption,frame,storage_path,created_at&order=created_at.desc&limit=50`, { headers: dbHeaders }),
+    fetch(`${SUPABASE_URL}/rest/v1/photo_votes?select=photo_id,vote`, { headers: dbHeaders }),
+  ]);
+  if (!photosRes.ok) throw new Error(await photosRes.text());
+  const rows = await photosRes.json();
+  const votes = votesRes.ok ? await votesRes.json() : [];
+
+  // Tally votes per photo
+  const tally = {};
+  for (const v of votes) {
+    if (!tally[v.photo_id]) tally[v.photo_id] = { likes: 0, dislikes: 0 };
+    if (v.vote === 1) tally[v.photo_id].likes++;
+    else if (v.vote === -1) tally[v.photo_id].dislikes++;
+  }
+
   return rows.map(r => ({
     id: r.id,
     uploader: r.uploader,
@@ -70,6 +80,8 @@ async function getPhotos() {
     frame: r.frame,
     url: `${SUPABASE_URL}/storage/v1/object/public/photos/${r.storage_path}`,
     created_at: r.created_at,
+    likes: tally[r.id]?.likes || 0,
+    dislikes: tally[r.id]?.dislikes || 0,
   }));
 }
 

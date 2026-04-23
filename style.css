@@ -1895,6 +1895,21 @@ line.pw-rope-path { fill: none; }
 .pw-photo-item:hover .pw-delete-btn { opacity: 1; }
 .pw-delete-btn:hover { background: rgba(200,30,30,0.85); border-color: rgba(255,80,80,0.6); color: #fff; }
 
+.pw-vote-row {
+  display: flex; gap: 0.5rem; justify-content: center;
+  margin-top: 0.4rem;
+}
+.pw-vote-btn {
+  display: flex; align-items: center; gap: 0.25rem;
+  background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 20px; padding: 0.2rem 0.6rem;
+  color: rgba(255,255,255,0.6); font-size: 0.72rem;
+  cursor: pointer; transition: all 0.15s;
+}
+.pw-vote-btn:hover { border-color: rgba(255,255,255,0.35); color: #fff; }
+.pw-like-btn.active    { background: rgba(0,200,80,0.2);  border-color: #00c850; color: #00e860; }
+.pw-dislike-btn.active { background: rgba(255,60,60,0.2); border-color: #ff4040; color: #ff6060; }
+
 /* === FRAMES === */
 
 /* Polaroid */

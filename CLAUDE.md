@@ -81,12 +81,20 @@ Anon key is hardcoded in each API file (low-security site, intentional).
 - `created_at` timestamptz
 
 **`photos`**
-- `id` uuid PK
+- `id` bigint PK (GENERATED ALWAYS AS IDENTITY)
 - `uploader` text NOT NULL
 - `caption` text
 - `frame` text — one of: `polaroid | glitter | gold | neon | retro | duck`
 - `storage_path` text NOT NULL
 - `created_at` timestamptz
+
+**`photo_votes`**
+- `id` bigint PK (GENERATED ALWAYS AS IDENTITY)
+- `photo_id` bigint NOT NULL REFERENCES photos(id) ON DELETE CASCADE
+- `session_id` text NOT NULL — `crypto.randomUUID()` stored in localStorage, one per browser
+- `vote` smallint NOT NULL — `1` (like) or `-1` (dislike)
+- `created_at` timestamptz
+- UNIQUE `(photo_id, session_id)` — prevents duplicate votes per browser
 
 **Storage bucket**: `photos` — public, anon upload/read.
 

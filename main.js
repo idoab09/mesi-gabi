@@ -1192,6 +1192,40 @@ async function submitScore(game) {
 let pwSelectedFrame = 'polaroid';
 let pwCroppedDataUrl = null;
 
+// Session ID — one per browser, persists in localStorage, used as vote identity
+function getPwSessionId() {
+  let id = localStorage.getItem('pw_session_id');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('pw_session_id', id);
+  }
+  return id;
+}
+
+// Track my votes in memory: { [photo_id]: 1 | -1 | null }
+let pwMyVotes = {};
+
+async function pwVote(photoId, vote) {
+  const sessionId = getPwSessionId();
+  try {
+    const r = await fetch('/api/photo-votes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photo_id: photoId, session_id: sessionId, vote }),
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    pwMyVotes[photoId] = data.my_vote;
+    // Update just this photo's buttons without full re-render
+    const hanger = document.querySelector(`.pw-photo-hanger[data-photo-id="${photoId}"]`);
+    if (!hanger) return;
+    hanger.querySelector('.pw-like-count').textContent  = data.likes;
+    hanger.querySelector('.pw-dislike-count').textContent = data.dislikes;
+    hanger.querySelector('.pw-like-btn').classList.toggle('active', data.my_vote === 1);
+    hanger.querySelector('.pw-dislike-btn').classList.toggle('active', data.my_vote === -1);
+  } catch {}
+}
+
 function pwSelectFrame(btn, frame) {
   pwSelectedFrame = frame;
   document.querySelectorAll('.pw-frame-btn').forEach(b => b.classList.remove('active'));
@@ -1293,8 +1327,16 @@ async function pwSubmit() {
 
 async function fetchPhotoWall() {
   try {
-    const r = await fetch('/api/photos');
-    if (r.ok) renderPhotoWall(await r.json());
+    const sessionId = getPwSessionId();
+    const [photosRes, myVotesRes] = await Promise.all([
+      fetch('/api/photos'),
+      fetch(`/api/photo-votes?session_id=${encodeURIComponent(sessionId)}`),
+    ]);
+    if (myVotesRes.ok) {
+      const mv = await myVotesRes.json();
+      if (Array.isArray(mv)) mv.forEach(v => { pwMyVotes[v.photo_id] = v.vote; });
+    }
+    if (photosRes.ok) renderPhotoWall(await photosRes.json());
   } catch {}
 }
 
@@ -1315,9 +1357,11 @@ function renderPhotoWall(photos) {
     const hanger = document.createElement('div');
     hanger.className = 'pw-photo-hanger';
     hanger.dataset.baseTilt = tilt;
+    hanger.dataset.photoId = p.id;
     hanger.style.transform = `rotate(${tilt}deg)`;
     const safeId = escapeHtml(String(p.id));
     const safeUploader = escapeHtml(p.uploader).replace(/'/g, '\\&#39;');
+    const myVote = pwMyVotes[p.id] || null;
     hanger.innerHTML = `
       <div class="pw-clip"></div>
       <div class="pw-photo-item pw-frame-${p.frame}">
@@ -1327,6 +1371,14 @@ function renderPhotoWall(photos) {
         </div>
         ${p.caption ? `<div class="pw-photo-caption">${escapeHtml(p.caption)}</div>` : ''}
         <div class="pw-photo-uploader">📸 ${escapeHtml(p.uploader)}</div>
+        <div class="pw-vote-row">
+          <button class="pw-vote-btn pw-like-btn${myVote === 1 ? ' active' : ''}" onclick="pwVote('${safeId}', 1)">
+            👍 <span class="pw-like-count">${p.likes || 0}</span>
+          </button>
+          <button class="pw-vote-btn pw-dislike-btn${myVote === -1 ? ' active' : ''}" onclick="pwVote('${safeId}', -1)">
+            👎 <span class="pw-dislike-count">${p.dislikes || 0}</span>
+          </button>
+        </div>
       </div>`;
     track.appendChild(hanger);
   });
@@ -2968,7 +3020,7 @@ function generateOutfit() {
     c.shadowColor = 'rgba(0,0,0,0.4)';
     c.shadowBlur = 6;
     c.font = `900 ${Math.round(FOOTER * 0.26)}px 'Heebo', Arial, sans-serif`;
-    c.fillText('המסיבה של גבי • אוגוסט 2025', W / 2, fTop + FOOTER * 0.33, W * 0.88);
+    c.fillText('סנטוריני • אוגוסט 2026', W / 2, fTop + FOOTER * 0.33, W * 0.88);
     c.font = `${Math.round(FOOTER * 0.22)}px Arial`;
     c.fillText('✨ 🎵 🎂 🎵 ✨', W / 2, fTop + FOOTER * 0.70, W * 0.85);
     c.shadowBlur = 0;
