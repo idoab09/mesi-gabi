@@ -663,6 +663,7 @@ body {
 .info-section {
   max-width: 700px;
   margin: 0 auto;
+  margin-bottom: 3rem;
   padding: var(--section-pad);
 }
 
@@ -1712,7 +1713,8 @@ body {
 .lb-submit-btn:hover { transform: scale(1.04); opacity: 0.9; }
 
 /* ===== PHOTO WALL ===== */
-.photo-wall-card { padding: 2rem; }
+.photo-wall-section { padding-bottom: 0; }
+.photo-wall-card { padding: 2rem; margin-bottom: 0; border-radius: 24px 24px 0 0; }
 
 /* Upload form */
 .pw-form-title { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 1.2rem; }
@@ -1758,35 +1760,119 @@ body {
 .pw-submit-btn { width: 100%; font-size: 0.95rem; padding: 0.7rem; margin-top: 0.3rem; }
 .pw-upload-status { min-height: 1.4em; font-size: 0.85rem; color: rgba(255,100,100,0.9); margin-top: 0.5rem; text-align: center; }
 
-/* Wall grid */
-.pw-wall-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
+/* ===== CLOTHESLINE WALL ===== */
+.pw-clothesline-section {
+  position: relative;
+  background: linear-gradient(180deg, rgba(20,10,40,0.95) 0%, rgba(10,5,25,1) 100%);
+  padding: 0 0 3rem;
+  overflow: hidden;
 }
-.pw-wall-empty { color: var(--text-dim); font-size: 0.9rem; text-align: center; padding: 2rem; grid-column: 1/-1; }
 
-/* Photo item base */
+/* Rope SVG */
+.pw-rope-wrap {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  pointer-events: none;
+  z-index: 2;
+}
+.pw-rope-svg {
+  width: 100%; height: 100%;
+}
+.pw-rope-path {
+  fill: none;
+  stroke: #8B6914;
+  stroke-width: 3;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+}
+
+/* Scrollable track */
+.pw-clothesline-track {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 2.5rem;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 0 2.5rem 2rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+  cursor: grab;
+  user-select: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pw-clothesline-track:active { cursor: grabbing; }
+.pw-clothesline-track::-webkit-scrollbar { height: 4px; }
+.pw-clothesline-track::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+.pw-wall-empty {
+  color: var(--text-dim); font-size: 0.9rem; text-align: center;
+  padding: 3rem 4rem; white-space: nowrap;
+}
+
+/* Each hanging photo */
+.pw-photo-hanger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  transform-origin: top center;
+  will-change: transform;
+  /* JS drives transform directly; transition only used for settle via .pw-settling class */
+}
+.pw-photo-hanger.pw-settling {
+  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Clip */
+.pw-clip {
+  width: 16px;
+  height: 28px;
+  position: relative;
+  margin-bottom: -4px;
+  z-index: 3;
+}
+.pw-clip::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 10px; height: 18px;
+  background: #bbb;
+  border-radius: 2px 2px 0 0;
+  box-shadow: inset -2px 0 0 rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.4);
+}
+.pw-clip::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 16px; height: 12px;
+  background: #999;
+  border-radius: 0 0 3px 3px;
+  clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Photo card */
 .pw-photo-item {
   display: flex; flex-direction: column; align-items: center;
-  cursor: default; transition: transform 0.2s;
+  width: 160px;
 }
-.pw-photo-item:hover { transform: scale(1.03) rotate(-0.5deg); }
-.pw-photo-inner { width: 100%; aspect-ratio: 1/1; overflow: hidden; }
+.pw-photo-inner { width: 160px; height: 160px; overflow: hidden; flex-shrink: 0; }
 .pw-photo-inner img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pw-photo-caption {
-  font-size: 0.78rem; color: rgba(255,255,255,0.75); text-align: center;
-  margin-top: 0.4rem; padding: 0 0.3rem; line-height: 1.3;
+  font-size: 0.72rem; color: rgba(255,255,255,0.8); text-align: center;
+  margin-top: 0.45rem; padding: 0 0.3rem; line-height: 1.3; max-width: 160px;
 }
-.pw-photo-uploader { font-size: 0.7rem; color: rgba(255,255,255,0.35); margin-top: 0.2rem; }
+.pw-photo-uploader {
+  font-size: 0.65rem; color: rgba(255,255,255,0.35); margin-top: 0.2rem;
+}
 
 /* === FRAMES === */
 
 /* Polaroid */
 .pw-frame-polaroid .pw-photo-inner {
-  background: #fff; padding: 8px 8px 32px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  background: #fff; padding: 8px 8px 36px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
 }
 .pw-frame-polaroid .pw-photo-caption { color: #333; font-family: 'Heebo', sans-serif; }
 

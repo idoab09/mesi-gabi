@@ -1264,20 +1264,116 @@ async function fetchPhotoWall() {
 }
 
 function renderPhotoWall(photos) {
-  const grid = document.getElementById('pw-wall-grid');
+  const track = document.getElementById('pw-clothesline-track');
+  const empty = document.getElementById('pw-wall-empty');
+  track.querySelectorAll('.pw-photo-hanger').forEach(el => el.remove());
+
   if (!photos || photos.length === 0) {
-    grid.innerHTML = '<div class="pw-wall-empty">עדיין אין תמונות — היה/י הראשון/ה! 📸</div>';
+    if (empty) empty.style.display = '';
     return;
   }
-  grid.innerHTML = photos.map(p => `
-    <div class="pw-photo-item pw-frame-${p.frame}">
-      <div class="pw-photo-inner">
-        <img src="${p.url}" alt="${escapeHtml(p.uploader)}" loading="lazy" />
-      </div>
-      ${p.caption ? `<div class="pw-photo-caption">${escapeHtml(p.caption)}</div>` : ''}
-      <div class="pw-photo-uploader">📸 ${escapeHtml(p.uploader)}</div>
-    </div>
-  `).join('');
+  if (empty) empty.style.display = 'none';
+
+  const tilts = [-4, 2, -2, 3, -3, 1, -1, 4];
+  photos.forEach((p, i) => {
+    const tilt = tilts[i % tilts.length];
+    const hanger = document.createElement('div');
+    hanger.className = 'pw-photo-hanger';
+    hanger.dataset.baseTilt = tilt;
+    hanger.style.transform = `rotate(${tilt}deg)`;
+    hanger.innerHTML = `
+      <div class="pw-clip"></div>
+      <div class="pw-photo-item pw-frame-${p.frame}">
+        <div class="pw-photo-inner">
+          <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.uploader)}" loading="lazy" />
+        </div>
+        ${p.caption ? `<div class="pw-photo-caption">${escapeHtml(p.caption)}</div>` : ''}
+        <div class="pw-photo-uploader">📸 ${escapeHtml(p.uploader)}</div>
+      </div>`;
+    track.appendChild(hanger);
+  });
+
+  initClotheslineSwing(track);
+}
+
+function initClotheslineSwing(track) {
+  if (track._swingCleanup) track._swingCleanup();
+
+  let lastScrollLeft = track.scrollLeft;
+  let velocity = 0;
+  let rafId = null;
+  let isPointerDown = false;
+  let pointerStartX = 0;
+  let scrollStartLeft = 0;
+
+  function applySwing() {
+    track.querySelectorAll('.pw-photo-hanger').forEach((h, i) => {
+      const baseTilt = parseFloat(h.dataset.baseTilt) || 0;
+      const phase = (i % 3 - 1) * 0.15;
+      const angle = Math.max(-22, Math.min(22, baseTilt + velocity * (0.6 + phase)));
+      h.style.transform = `rotate(${angle}deg)`;
+    });
+  }
+
+  function setSettling(on) {
+    track.querySelectorAll('.pw-photo-hanger').forEach(h => h.classList.toggle('pw-settling', on));
+  }
+
+  function tick() {
+    const delta = track.scrollLeft - lastScrollLeft;
+    lastScrollLeft = track.scrollLeft;
+    velocity = velocity * 0.82 + delta * 0.18;
+    setSettling(false);
+    applySwing();
+    if (Math.abs(velocity) > 0.05) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      velocity = 0;
+      setSettling(true);
+      applySwing();
+      rafId = null;
+    }
+  }
+
+  function onScroll() {
+    setSettling(false);
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function onPointerDown(e) {
+    if (e.target.closest('img') || e.target.closest('.pw-photo-item')) return;
+    isPointerDown = true;
+    pointerStartX = e.clientX;
+    scrollStartLeft = track.scrollLeft;
+    track.setPointerCapture(e.pointerId);
+    if (rafId) cancelAnimationFrame(rafId);
+    setSettling(false);
+    velocity = 0;
+  }
+  function onPointerMove(e) {
+    if (!isPointerDown) return;
+    const dx = pointerStartX - e.clientX;
+    track.scrollLeft = scrollStartLeft + dx;
+    velocity = dx * 0.08;
+    applySwing();
+  }
+  function onPointerUp() { isPointerDown = false; rafId = requestAnimationFrame(tick); }
+
+  track.addEventListener('scroll', onScroll, { passive: true });
+  track.addEventListener('pointerdown', onPointerDown);
+  track.addEventListener('pointermove', onPointerMove);
+  track.addEventListener('pointerup', onPointerUp);
+  track.addEventListener('pointercancel', onPointerUp);
+
+  track._swingCleanup = () => {
+    if (rafId) cancelAnimationFrame(rafId);
+    track.removeEventListener('scroll', onScroll);
+    track.removeEventListener('pointerdown', onPointerDown);
+    track.removeEventListener('pointermove', onPointerMove);
+    track.removeEventListener('pointerup', onPointerUp);
+    track.removeEventListener('pointercancel', onPointerUp);
+  };
 }
 
 // ========== CLICK ANYWHERE SPARKLE ==========
