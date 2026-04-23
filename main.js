@@ -2914,91 +2914,62 @@ function generateOutfit() {
 
   function pbDownload() {
     const src = getCanvas();
-    // Normalise to a fixed output width so layout is predictable regardless of webcam resolution
-    const OUT_W = 720;
-    const SCALE = OUT_W / src.width;
-    const IMG_W = OUT_W;
-    const IMG_H = Math.round(src.height * SCALE);
-    const BORDER = Math.round(OUT_W * 0.055);
-    const HEADER = Math.round(OUT_W * 0.24);
-    const FOOTER = Math.round(OUT_W * 0.20);
-    const TW = IMG_W + BORDER * 2;
-    const TH = IMG_H + HEADER + FOOTER + BORDER * 2;
+    // No side borders, no gaps — header + photo + footer flush
+    const W = 720;
+    const IMG_H = Math.round(src.height * (W / src.width));
+    const HEADER = Math.round(W * 0.24);
+    const FOOTER = Math.round(W * 0.20);
+    const TH = HEADER + IMG_H + FOOTER;
 
     const out = document.createElement('canvas');
-    out.width = TW;
+    out.width = W;
     out.height = TH;
     const c = out.getContext('2d');
 
-    // White paper background
-    c.fillStyle = '#ffffff';
-    c.fillRect(0, 0, TW, TH);
-
-    // Rainbow header band
-    const grad = c.createLinearGradient(0, 0, TW, 0);
+    // Rainbow header
+    const grad = c.createLinearGradient(0, 0, W, 0);
     grad.addColorStop(0,   '#ff2d78');
     grad.addColorStop(0.25,'#ff9900');
     grad.addColorStop(0.5, '#ffe600');
     grad.addColorStop(0.75,'#00e0ff');
     grad.addColorStop(1,   '#cc00ff');
     c.fillStyle = grad;
-    c.fillRect(0, 0, TW, HEADER);
+    c.fillRect(0, 0, W, HEADER);
 
-    // Rainbow footer band (reversed)
-    const gradB = c.createLinearGradient(TW, 0, 0, 0);
+    // Rainbow footer
+    const gradB = c.createLinearGradient(W, 0, 0, 0);
     gradB.addColorStop(0,   '#ff2d78');
     gradB.addColorStop(0.25,'#ff9900');
     gradB.addColorStop(0.5, '#ffe600');
     gradB.addColorStop(0.75,'#00e0ff');
     gradB.addColorStop(1,   '#cc00ff');
     c.fillStyle = gradB;
-    c.fillRect(0, TH - FOOTER, TW, FOOTER);
+    c.fillRect(0, HEADER + IMG_H, W, FOOTER);
 
-    // Side borders
-    c.fillStyle = '#111';
-    c.fillRect(0,          HEADER, BORDER, IMG_H + BORDER * 2);
-    c.fillRect(TW - BORDER, HEADER, BORDER, IMG_H + BORDER * 2);
+    // Photo — full width, flush
+    c.drawImage(src, 0, HEADER, W, IMG_H);
 
-    // Header — title
+    // Header text
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    const titleSize = Math.round(HEADER * 0.36);
-    c.font = `900 ${titleSize}px 'Heebo', Arial, sans-serif`;
     c.fillStyle = '#fff';
-    c.shadowColor = 'rgba(0,0,0,0.45)';
+    c.shadowColor = 'rgba(0,0,0,0.5)';
     c.shadowBlur = 10;
-    c.fillText('מסיגבי', TW / 2, HEADER * 0.35);
+    c.font = `900 ${Math.round(HEADER * 0.36)}px 'Heebo', Arial, sans-serif`;
+    c.fillText('מסיגבי', W / 2, HEADER * 0.35);
     c.shadowBlur = 0;
+    c.font = `${Math.round(HEADER * 0.28)}px Arial`;
+    c.fillText('🦆 📸 🥋 🎊 🦆', W / 2, HEADER * 0.75);
 
-    // Header — emoji row
-    const emojiSize = Math.round(HEADER * 0.30);
-    c.font = `${emojiSize}px Arial`;
-    c.fillText('🦆 📸 🥋 🎊 🦆', TW / 2, HEADER * 0.72);
-
-    // Photo — scaled + clipped to safe area
-    const photoX = BORDER;
-    const photoY = HEADER + BORDER;
-    c.save();
-    c.beginPath();
-    c.rect(photoX, photoY, IMG_W, IMG_H);
-    c.clip();
-    c.drawImage(src, photoX, photoY, IMG_W, IMG_H);
-    c.restore();
-
-    // Footer — two lines vertically centred inside footer band
-    const footerTop = TH - FOOTER;
-    const line1Y = footerTop + FOOTER * 0.32;
-    const line2Y = footerTop + FOOTER * 0.68;
-    const subSize = Math.round(FOOTER * 0.26);
-    const tagSize = Math.round(FOOTER * 0.20);
-
+    // Footer text — proportional positions inside footer band
+    const fTop = HEADER + IMG_H;
     c.fillStyle = '#fff';
-    c.shadowColor = 'rgba(0,0,0,0.35)';
+    c.shadowColor = 'rgba(0,0,0,0.4)';
     c.shadowBlur = 6;
-    c.font = `900 ${subSize}px 'Heebo', Arial, sans-serif`;
-    c.fillText('המסיבה של גבי • אוגוסט 2025', TW / 2, line1Y);
-    c.font = `${tagSize}px Arial`;
-    c.fillText('✨ 🎵 🎂 🎵 ✨', TW / 2, line2Y);
+    c.font = `900 ${Math.round(FOOTER * 0.26)}px 'Heebo', Arial, sans-serif`;
+    c.fillText('המסיבה של גבי • אוגוסט 2025', W / 2, fTop + FOOTER * 0.33);
+    c.font = `${Math.round(FOOTER * 0.22)}px Arial`;
+    c.fillText('✨ 🎵 🎂 🎵 ✨', W / 2, fTop + FOOTER * 0.70);
     c.shadowBlur = 0;
 
     const a = document.createElement('a');
