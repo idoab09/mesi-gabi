@@ -494,6 +494,7 @@ async function addGuest(name) {
 function askRemove(name) {
   pendingRemoveName = name;
   pendingRemovePhoto = null;
+  pendingRemoveMessage = null;
   openPwModal('הסרה: ' + name);
 }
 
@@ -515,6 +516,7 @@ function openPwModal(label) {
 function askRemovePhoto(id, uploader) {
   pendingRemovePhoto = { id, uploader };
   pendingRemoveName = null;
+  pendingRemoveMessage = null;
   openPwModal('הסרת תמונה: ' + uploader);
 }
 
