@@ -3104,6 +3104,12 @@ const OPPONENTS = [
   { name: 'אריה המאבטח 🦁🎊', emoji: '🦁', color: '#A3FF00', hp: 120, speed: 1.6, aggression: 0.45, blockRate: 0.28, scene: 'santorini', boss: true },
 ];
 
+// Secret final boss — unlocked after escape room victory
+const ANTI_GABI_OPPONENT = {
+  name: 'אנטי-גבי 😈', emoji: '😈', color: '#FF2D7A', hp: 220,
+  speed: 2.2, aggression: 0.72, blockRate: 0.42, scene: 'antigabi', secretBoss: true,
+};
+
 // Journey map stops — one per opponent + final destination
 const MAP_STOPS = [
   { label: 'בית גבי', sublabel: 'פתח תקווה', emoji: '🏠' },
@@ -3125,14 +3131,30 @@ const STORY_SCREENS = [
 
 const WIN_STORY = { emoji: '🎉', title: 'גבי הגיע למסיבה!!!', text: 'האריה על הרצפה. הדלת פתוחה.\nגבי פורץ פנימה לאוויר הסנטוריני!\nהקהל משתגע. הקונפטי עף.\nגבי — אלוף הקארטה והמסיבה! 🏆🥋🦆', btn: '🎊 שחק שוב!' };
 
+const ANTI_GABI_STORY = {
+  emoji: '😈',
+  title: '⚠️ שלב סודי — אנטי-גבי!',
+  text: 'המסיגבי החלה — אבל אנטי-גבי לא נוטרל כל כך מהר.\nהוא ירד מהצל, לבוש שחור, עיניים בוערות.\n"גבי... אני כבר ציפיתי לך."\nרק קרב אחד יכריע את עתיד המסיגבי — לנצח. 🥋😈',
+  btn: '⚔️ לקרב הסופי!',
+};
+
+const ANTI_GABI_WIN_STORY = {
+  emoji: '🎊',
+  title: '😈 אנטי-גבי הובס!!!',
+  text: 'אנטי-גבי שוכב על הרצפה, מנוצח לחלוטין.\n"איך...?!" הוא לוחש.\nגבי מסתכל עליו בשקט, מתיר את הסרט מהראש.\n"המסיגבי לא תבוטל לעולם."\nהמסיבה נמשכת. הנצחון — שלם. 🏆🎉🥋',
+  btn: '🎊 שחק שוב!',
+};
+
 // Game state
 let gState = null;
 let gRaf = null;
 let gKeys = {};
 let gCurrentRound = 0;
-// gPhase: 'intro'|'story'|'map'|'fight'|'win'
+// gPhase: 'intro'|'story'|'map'|'fight'|'win'|'secretintro'|'secretfight'|'secretwin'
 let gPhase = 'intro';
 let gGameStarted = false;
+let gSecretUnlocked = false; // set true when escape room is solved
+let gSecretMode = false;     // true while fighting/after anti-gabi
 
 function karateStoryAction() {
   if (gPhase === 'intro') {
@@ -3140,6 +3162,8 @@ function karateStoryAction() {
     showStory(STORY_SCREENS[1]);
   } else if (gPhase === 'story') {
     startFight(gCurrentRound);
+  } else if (gPhase === 'secretintro') {
+    startSecretFight();
   } else if (gPhase === 'map') {
     // After map, show next fight story or win
     if (gCurrentRound >= OPPONENTS.length) {
@@ -3150,6 +3174,18 @@ function karateStoryAction() {
       showStory(STORY_SCREENS[gCurrentRound + 1]);
     }
   } else if (gPhase === 'win') {
+    gSecretUnlocked = localStorage.getItem('escape_victory') === 'true';
+    if (gSecretUnlocked) {
+      gPhase = 'secretintro';
+      gSecretMode = true;
+      showStory(ANTI_GABI_STORY);
+    } else {
+      gCurrentRound = 0;
+      gPhase = 'intro';
+      showStory(STORY_SCREENS[0]);
+    }
+  } else if (gPhase === 'secretwin') {
+    gSecretMode = false;
     gCurrentRound = 0;
     gPhase = 'intro';
     showStory(STORY_SCREENS[0]);
@@ -3231,6 +3267,28 @@ function startFight(roundIdx) {
   document.getElementById('karate-status-bar').textContent = `סיבוב ${roundIdx + 1}: מול ${opp.name}`;
 }
 
+function startSecretFight() {
+  gPhase = 'secretfight';
+  const opp = ANTI_GABI_OPPONENT;
+
+  document.getElementById('karate-story-screen').style.display = 'none';
+  document.getElementById('karate-map-screen').style.display = 'none';
+  document.getElementById('karate-game-area').style.display = 'flex';
+  resizeCanvas();
+
+  document.getElementById('karate-round-display').textContent = '😈 שלב סודי';
+  document.getElementById('karate-enemy-name').textContent = opp.name;
+  updateHUD(150, 150, opp.hp, opp.hp);
+
+  gState = makeState(opp);
+  gGameStarted = true;
+
+  if (gRaf) cancelAnimationFrame(gRaf);
+  gRaf = requestAnimationFrame(gameLoop);
+
+  document.getElementById('karate-status-bar').textContent = '😈 הקרב הסופי — אנטי-גבי!';
+}
+
 function makeState(opp) {
   return {
     player: {
@@ -3295,19 +3353,36 @@ function update() {
     if (s.roundOverTimer <= 0) {
       cancelAnimationFrame(gRaf);
       gGameStarted = false;
-      if (s.winner === 'player') {
-        gCurrentRound++;
-        showMap(gCurrentRound - 1);
-        if (gCurrentRound >= OPPONENTS.length) {
+
+      if (gSecretMode) {
+        // Secret boss fight outcome
+        if (s.winner === 'player') {
+          gPhase = 'secretwin';
           const confettiCanvas = document.getElementById('confetti-canvas');
-          createConfetti(confettiCanvas.width / 2, confettiCanvas.height / 2, 80, true);
-          showToast('🏆 גבי הגיע למסיבה! אלוף הקארטה!');
-          erClueFound('clue_karate');
+          [0.15, 0.35, 0.5, 0.65, 0.85, 0.5].forEach((xf, i) =>
+            setTimeout(() => createConfetti(confettiCanvas.width * xf, 80, 40, true), i * 180)
+          );
+          showToast('🏆 אנטי-גבי הובס! גבי — אלוף עולמי! 😈💥');
+          showStory(ANTI_GABI_WIN_STORY);
+        } else {
+          gPhase = 'secretintro';
+          showStory({ ...ANTI_GABI_STORY, btn: '🔄 נסה שוב!' });
         }
       } else {
-        // Player lost — retry same round
-        gPhase = 'story';
-        showStory({ ...STORY_SCREENS[gCurrentRound + 1], btn: '🔄 נסה שוב!' });
+        if (s.winner === 'player') {
+          gCurrentRound++;
+          showMap(gCurrentRound - 1);
+          if (gCurrentRound >= OPPONENTS.length) {
+            const confettiCanvas = document.getElementById('confetti-canvas');
+            createConfetti(confettiCanvas.width / 2, confettiCanvas.height / 2, 80, true);
+            showToast('🏆 גבי הגיע למסיבה! אלוף הקארטה!');
+            erClueFound('clue_karate');
+          }
+        } else {
+          // Player lost — retry same round
+          gPhase = 'story';
+          showStory({ ...STORY_SCREENS[gCurrentRound + 1], btn: '🔄 נסה שוב!' });
+        }
       }
     }
     return;
@@ -3523,12 +3598,13 @@ function draw() {
 }
 
 function drawBackground(ctx, round) {
-  const scene = OPPONENTS[round]?.scene || 'house';
+  const scene = gSecretMode ? 'antigabi' : (OPPONENTS[round]?.scene || 'house');
   if (scene === 'house') drawBgHouse(ctx);
   else if (scene === 'street') drawBgStreet(ctx);
   else if (scene === 'airport') drawBgAirport(ctx);
   else if (scene === 'plane') drawBgPlane(ctx);
   else if (scene === 'santorini') drawBgSantorini(ctx);
+  else if (scene === 'antigabi') drawBgAntiGabi(ctx);
 }
 
 function drawBgHouse(ctx) {
@@ -3726,6 +3802,62 @@ function drawBgSantorini(ctx) {
   ctx.fillStyle = '#b8ac98'; ctx.fillRect(0, GROUND_Y, CANVAS_W, 4);
   ctx.save(); ctx.font = 'bold 11px Heebo, Arial'; ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.textAlign = 'right'; ctx.fillText('🏝️ סנטוריני, יוון', CANVAS_W-8, 18); ctx.restore();
+}
+
+function drawBgAntiGabi(ctx) {
+  // Void dimension — pulsing dark red/black hellscape
+  const t = Date.now() / 1000;
+  const pulse = 0.5 + 0.5 * Math.sin(t * 1.8);
+  const grad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+  grad.addColorStop(0, `rgba(${Math.round(10 + pulse*8)},0,${Math.round(5 + pulse*5)},1)`);
+  grad.addColorStop(0.5, `rgba(${Math.round(40 + pulse*20)},0,10,1)`);
+  grad.addColorStop(1, `rgba(${Math.round(60 + pulse*30)},0,15,1)`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CANVAS_W, GROUND_Y);
+
+  // Blood moon
+  ctx.save();
+  ctx.globalAlpha = 0.6 + pulse * 0.3;
+  const moonGrad = ctx.createRadialGradient(300, 40, 5, 300, 40, 35);
+  moonGrad.addColorStop(0, '#ff2d7a'); moonGrad.addColorStop(1, 'rgba(180,0,40,0)');
+  ctx.fillStyle = moonGrad; ctx.fillRect(0, 0, CANVAS_W, GROUND_Y);
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = '#8b0000';
+  ctx.beginPath(); ctx.arc(300, 40, 28, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 0.4; ctx.fillStyle = '#ff2d7a';
+  ctx.beginPath(); ctx.arc(300, 40, 42, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // Cracks in ground — radiating red glow lines
+  ctx.save();
+  ctx.strokeStyle = `rgba(255,45,122,${0.3 + pulse * 0.4})`;
+  ctx.lineWidth = 1.5;
+  [[100,GROUND_Y,80,GROUND_Y-30],[200,GROUND_Y,160,GROUND_Y-50],[350,GROUND_Y,390,GROUND_Y-25],
+   [450,GROUND_Y,480,GROUND_Y-40],[550,GROUND_Y,530,GROUND_Y-20]].forEach(([x1,y1,x2,y2]) => {
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  });
+  ctx.restore();
+
+  // Floating evil particles
+  ctx.save();
+  for (let i = 0; i < 8; i++) {
+    const px = (i * 87 + t * 30) % CANVAS_W;
+    const py = (GROUND_Y - 20) - Math.abs(Math.sin(t * 0.7 + i)) * (GROUND_Y - 40);
+    ctx.globalAlpha = 0.3 + 0.3 * Math.sin(t + i);
+    ctx.fillStyle = '#ff2d7a';
+    ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
+  // Void floor — cracked obsidian
+  const floorGrad = ctx.createLinearGradient(0, GROUND_Y, 0, CANVAS_H);
+  floorGrad.addColorStop(0, '#1a0008'); floorGrad.addColorStop(1, '#0a0005');
+  ctx.fillStyle = floorGrad; ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y);
+  ctx.fillStyle = `rgba(255,45,122,${0.15 + pulse * 0.2})`; ctx.fillRect(0, GROUND_Y, CANVAS_W, 3);
+
+  ctx.save(); ctx.font = 'bold 11px Heebo, Arial';
+  ctx.fillStyle = `rgba(255,45,122,${0.5 + pulse * 0.3})`;
+  ctx.textAlign = 'right'; ctx.fillText('😈 ממד האנטי-גבי', CANVAS_W - 8, 18); ctx.restore();
 }
 
 function drawFighter(ctx, f, isEnemy, round) {
@@ -3940,7 +4072,91 @@ function drawEnemyFighter(ctx, f, round) {
     ctx.fillRect(w - 9, h * 0.33 - armSwing, 9, 10);
   }
 
-  // Head - big duck/animal head
+  if (opp.secretBoss) {
+    // ===== אנטי-גבי — human villain in black =====
+    const t2 = Date.now() / 200;
+    // Aura glow
+    ctx.save();
+    ctx.globalAlpha = 0.25 + 0.15 * Math.sin(t2 * 0.4);
+    ctx.fillStyle = '#FF2D7A';
+    ctx.beginPath(); ctx.arc(w / 2, h * 0.4, 34, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // Black gi body
+    ctx.fillStyle = '#1a0010';
+    ctx.fillRect(6, h * 0.3, w - 12, h * 0.28);
+    // Red sash/belt
+    ctx.fillStyle = '#ff2d7a';
+    ctx.fillRect(4, h * 0.555, w - 8, 7);
+
+    // Arms
+    if (isPunch) {
+      const ext = Math.sin((18 - f.stateTimer) / 18 * Math.PI) * 22;
+      ctx.fillStyle = '#c0a090';
+      ctx.fillRect(w - 8 + ext, h * 0.35, 18, 10);
+      // Fist glow
+      ctx.save(); ctx.globalAlpha = 0.7; ctx.fillStyle = '#ff2d7a';
+      ctx.beginPath(); ctx.arc(w - 2 + ext, h * 0.4, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    } else {
+      const armSwing = isWalk ? Math.sin(t2 * 3) * 5 : 0;
+      ctx.fillStyle = '#c0a090';
+      ctx.fillRect(0, h * 0.33 + armSwing, 9, 10);
+      ctx.fillRect(w - 9, h * 0.33 - armSwing, 9, 10);
+    }
+
+    // Kick leg
+    if (isKick) {
+      ctx.fillStyle = '#1a0010';
+      ctx.save();
+      ctx.translate(36, h * 0.65);
+      ctx.rotate(-Math.sin((22 - f.stateTimer) / 22 * Math.PI) * 0.7);
+      ctx.fillRect(0, 0, 22, 10);
+      ctx.restore();
+    }
+
+    // Human head — slightly menacing
+    ctx.fillStyle = '#c0a090';
+    ctx.beginPath(); ctx.ellipse(w / 2, h * 0.17, 14, 16, 0, 0, Math.PI * 2); ctx.fill();
+    // Dark hair swept back
+    ctx.fillStyle = '#0a0010';
+    ctx.fillRect(w / 2 - 12, h * 0.03, 24, 7);
+    ctx.beginPath(); ctx.arc(w / 2, h * 0.07, 12, Math.PI, 0); ctx.fill();
+    // Villain V-hair point
+    ctx.beginPath(); ctx.moveTo(w/2-4, h*0.1); ctx.lineTo(w/2, h*0.15); ctx.lineTo(w/2+4, h*0.1); ctx.fill();
+
+    // Eyes — glowing red
+    if (!isHurt && !isDead) {
+      ctx.fillStyle = '#ff2d7a';
+      ctx.beginPath(); ctx.arc(w / 2 - 5, h * 0.16, 2.8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(w / 2 + 5, h * 0.16, 2.8, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#ff2d7a';
+      ctx.beginPath(); ctx.arc(w/2-5, h*0.16, 5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(w/2+5, h*0.16, 5, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      // Sharp villain brows
+      ctx.strokeStyle = '#0a0010'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(w/2-10, h*0.1); ctx.lineTo(w/2-2, h*0.13); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w/2+10, h*0.1); ctx.lineTo(w/2+2, h*0.13); ctx.stroke();
+      // Sinister smile
+      ctx.strokeStyle = '#5a0020'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(w/2, h*0.23, 6, 0.1, Math.PI - 0.1); ctx.stroke();
+    } else {
+      ctx.strokeStyle = '#A3FF00'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(w/2-8, h*0.13); ctx.lineTo(w/2-3, h*0.19); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w/2-3, h*0.13); ctx.lineTo(w/2-8, h*0.19); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w/2+3, h*0.13); ctx.lineTo(w/2+8, h*0.19); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w/2+8, h*0.13); ctx.lineTo(w/2+3, h*0.19); ctx.stroke();
+    }
+
+    // Name label
+    ctx.font = 'bold 9px Heebo, Arial'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#FF2D7A'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+    ctx.strokeText('אנטי-גבי', w / 2, h + 12);
+    ctx.fillText('אנטי-גבי', w / 2, h + 12);
+    return;
+  }
+
+  // ===== Regular duck/animal head =====
   ctx.fillStyle = col;
   ctx.beginPath();
   ctx.ellipse(w / 2, h * 0.16, 17, 18, 0, 0, Math.PI * 2);
@@ -3948,20 +4164,14 @@ function drawEnemyFighter(ctx, f, round) {
 
   // Duck bill / animal feature per round
   if (round === 0 || round === 1) {
-    // Duck bill
     ctx.fillStyle = '#FF6B00';
     ctx.beginPath();
     ctx.ellipse(w / 2 + 14, h * 0.18, 8, 5, 0.3, 0, Math.PI * 2);
     ctx.fill();
   } else if (round === 2) {
-    // Frog wide mouth
-    ctx.strokeStyle = '#006644';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(w / 2, h * 0.22, 10, 0, Math.PI);
-    ctx.stroke();
+    ctx.strokeStyle = '#006644'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(w / 2, h * 0.22, 10, 0, Math.PI); ctx.stroke();
   } else if (round === 3) {
-    // Flamingo beak
     ctx.fillStyle = '#FF88CC';
     ctx.beginPath();
     ctx.moveTo(w / 2 + 14, h * 0.16);
@@ -3969,7 +4179,6 @@ function drawEnemyFighter(ctx, f, round) {
     ctx.lineTo(w / 2 + 14, h * 0.22);
     ctx.fill();
   } else if (round === 4) {
-    // Lion mane
     ctx.fillStyle = '#FF6B00';
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2;
@@ -3978,9 +4187,7 @@ function drawEnemyFighter(ctx, f, round) {
       ctx.fill();
     }
     ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.ellipse(w / 2, h * 0.16, 15, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.ellipse(w / 2, h * 0.16, 15, 16, 0, 0, Math.PI * 2); ctx.fill();
   }
 
   // Eyes
@@ -3991,7 +4198,6 @@ function drawEnemyFighter(ctx, f, round) {
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(w / 2 - 5, h * 0.13, 1.2, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(w / 2 + 7, h * 0.13, 1.2, 0, Math.PI * 2); ctx.fill();
-    // Mean eyebrows
     ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(w/2-10, h*0.09); ctx.lineTo(w/2-2, h*0.11); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(w/2+10, h*0.09); ctx.lineTo(w/2+2, h*0.11); ctx.stroke();
@@ -4004,11 +4210,8 @@ function drawEnemyFighter(ctx, f, round) {
   }
 
   // Name label
-  ctx.font = 'bold 8px Heebo, Arial';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = opp.color;
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
+  ctx.font = 'bold 8px Heebo, Arial'; ctx.textAlign = 'center';
+  ctx.fillStyle = opp.color; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
   ctx.strokeText(opp.emoji, w / 2, h + 12);
   ctx.fillText(opp.emoji, w / 2, h + 12);
 }
@@ -4151,6 +4354,7 @@ function erRenderHQ() {
         ? `<div class="er-clue-text">${c.text}</div>`
         : `<div class="er-clue-locked-label">🔒 לא נמצא עדיין</div>`
       }
+      <div class="er-clue-hint">${c.hint || ''}</div>
     </div>`;
   }).join('');
 
@@ -4165,9 +4369,7 @@ function erCheckAllFound() {
   // all found — show solve panel
   const solvePanel = document.getElementById('er-solve-panel');
   solvePanel.style.display = '';
-  // assembled code: digits in clue order
-  const digits = (er.clues || []).map(c => c.digit).join(' - ');
-  document.getElementById('er-assembled-code').textContent = digits;
+  document.getElementById('er-assembled-code').textContent = '🔓 כל הרמזים נאספו — הכנס/י את הסיסמה הסודית!';
 }
 
 function erVillainReact() {
@@ -4192,8 +4394,8 @@ function erAcceptMission() {
 
 function erSubmitCode() {
   const input = document.getElementById('er-code-input');
-  const val = (input?.value || '').trim();
-  const correct = D.escapeRoom?.finalCode || '';
+  const val = (input?.value || '').trim().toUpperCase();
+  const correct = (D.escapeRoom?.finalCode || '').toUpperCase();
   if (val !== correct) {
     document.getElementById('er-code-error').textContent = '❌ קוד שגוי — נסה/י שוב!';
     input.classList.remove('er-shake');
