@@ -4345,8 +4345,7 @@ function erRenderHQ() {
 
   // render clue slots
   const board = document.getElementById('er-corkboard');
-  board.innerHTML = [...clues].reverse().map((c, ri) => {
-    const i = clues.length - 1 - ri;
+  board.innerHTML = clues.map((c, i) => {
     const isFound = erIsFound(c.id);
     return `<div class="er-clue-slot ${isFound ? 'found' : 'locked'}" style="--tilt:${ER_TILTS[i % ER_TILTS.length]}">
       <div class="er-clue-icon">${c.icon}</div>

@@ -4666,6 +4666,7 @@ line.pw-rope-path { fill: none; }
   padding: 2rem 1.5rem;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  direction: ltr;
   gap: 1.4rem;
   box-shadow:
     inset 0 3px 14px rgba(0,0,0,0.5),
