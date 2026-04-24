@@ -4573,3 +4573,237 @@ line.pw-rope-path { fill: none; }
 .fortune-scene { display: contents; }
 .fortune-witch { display: none; }
 .fortune-again-btn { display: none !important; }
+
+/* ===== ESCAPE ROOM ===== */
+.escape-room-section {
+  padding: var(--section-pad);
+  text-align: center;
+}
+
+/* pre-mission panel */
+.er-premission {
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+.er-pre-portrait { font-size: 4rem; animation: er-villain-float 3s ease-in-out infinite; }
+@keyframes er-villain-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+.er-pre-name {
+  font-size: 1.4rem; font-weight: 900; color: var(--pink);
+  text-shadow: 0 0 20px rgba(255,45,122,0.5);
+}
+.er-pre-speech {
+  background: rgba(80,0,0,0.35);
+  border: 1px solid rgba(255,45,122,0.4);
+  border-radius: 12px;
+  padding: 1rem 1.4rem;
+  font-style: italic;
+  color: rgba(255,255,255,0.8);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  direction: rtl;
+}
+.er-accept-btn {
+  margin-top: 0.5rem;
+  padding: 0.9rem 2.5rem;
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255,45,122,0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.er-accept-btn:hover { transform: scale(1.04); box-shadow: 0 6px 28px rgba(255,45,122,0.55); }
+.er-accept-btn:active { transform: scale(0.97); }
+
+/* mission active wrapper */
+.er-mission-active { text-align: center; }
+
+/* villain card */
+.er-villain-card {
+  background: rgba(80,0,0,0.3);
+  border: 1px solid rgba(255,45,122,0.4);
+  border-radius: 16px;
+  padding: 1.2rem 1.4rem;
+  max-width: 480px;
+  margin: 0 auto 2rem;
+}
+.er-villain-portrait { font-size: 3rem; }
+.er-villain-name { font-weight: 900; font-size: 1.2rem; color: var(--pink); margin: 0.3rem 0; }
+.er-villain-speech {
+  font-style: italic;
+  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,45,122,0.25);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin: 0.6rem 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  direction: rtl;
+  min-height: 2.5rem;
+  transition: color 0.4s;
+}
+.er-villain-speech.er-react { color: #ff6b6b; }
+.er-progress-line { font-size: 0.82rem; color: var(--text-muted); }
+
+/* corkboard */
+.er-corkboard {
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(180,120,60,0.2) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, rgba(140,90,30,0.15) 0%, transparent 60%),
+    #8b5e3c;
+  border-radius: 14px;
+  padding: 2rem 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.4rem;
+  box-shadow:
+    inset 0 3px 14px rgba(0,0,0,0.5),
+    0 0 0 7px #6b4220,
+    0 0 0 9px #4a2c10;
+  margin-bottom: 2rem;
+  min-height: 200px;
+  position: relative;
+}
+@media (max-width: 600px) {
+  .er-corkboard { grid-template-columns: repeat(2, 1fr); padding: 1.4rem 1rem; gap: 1rem; }
+}
+
+/* clue slot — manila note */
+.er-clue-slot {
+  background: #f5e6c8;
+  border-radius: 3px;
+  padding: 1.4rem 0.9rem 0.9rem;
+  color: #1a0a00;
+  position: relative;
+  box-shadow: 3px 4px 10px rgba(0,0,0,0.45);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transform: rotate(var(--tilt, 0deg));
+  transition: box-shadow 0.3s, filter 0.3s;
+}
+/* pushpin */
+.er-clue-slot::before {
+  content: '';
+  position: absolute;
+  top: -9px; left: 50%;
+  transform: translateX(-50%);
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ff6666, #990000);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.55), inset 0 -1px 3px rgba(0,0,0,0.3);
+}
+.er-clue-slot.locked {
+  filter: grayscale(1) opacity(0.4);
+}
+.er-clue-slot.found {
+  box-shadow:
+    0 0 0 2px var(--pink),
+    3px 4px 10px rgba(0,0,0,0.45),
+    0 0 22px rgba(255,45,122,0.35);
+  animation: er-clue-appear 0.5s cubic-bezier(0.2,2,0.4,1) both;
+}
+@keyframes er-clue-appear {
+  from { transform: rotate(var(--tilt,0deg)) scale(0.5); opacity: 0; }
+  to   { transform: rotate(var(--tilt,0deg)) scale(1);   opacity: 1; }
+}
+.er-clue-icon  { font-size: 1.4rem; }
+.er-clue-title { font-size: 0.7rem; font-weight: 900; color: #5a2800; direction: rtl; }
+.er-clue-text  { font-size: 0.75rem; line-height: 1.45; direction: rtl; flex: 1; }
+.er-clue-locked-label { font-size: 0.72rem; color: #999; margin-top: auto; }
+
+/* solve panel */
+.er-solve-panel {
+  text-align: center;
+  background: rgba(0,255,136,0.05);
+  border: 1px solid rgba(0,255,136,0.35);
+  border-radius: 18px;
+  padding: 2rem 1.5rem;
+  margin-bottom: 1.5rem;
+  animation: er-panel-in 0.5s ease both;
+}
+@keyframes er-panel-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+.er-solve-title {
+  font-size: 1.15rem; font-weight: 900; color: #00ff88; margin-bottom: 0.8rem;
+}
+.er-assembled-code {
+  font-size: 1.8rem; font-family: monospace; letter-spacing: 0.5rem;
+  color: rgba(255,255,255,0.7); margin-bottom: 1.2rem;
+}
+.er-code-input-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; }
+.er-code-input {
+  font-family: 'Courier New', monospace;
+  font-size: 2rem; letter-spacing: 0.6rem; text-align: center;
+  width: min(15rem, 90%);
+  background: #0d0020; color: #00ff88;
+  border: 2px solid #00ff88; border-radius: 8px;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 0 18px rgba(0,255,136,0.35);
+  direction: ltr;
+}
+.er-code-input:focus { outline: none; box-shadow: 0 0 28px rgba(0,255,136,0.6); }
+.er-code-input.er-shake {
+  animation: er-input-shake 0.4s ease;
+}
+@keyframes er-input-shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-8px); }
+  40%     { transform: translateX(8px); }
+  60%     { transform: translateX(-5px); }
+  80%     { transform: translateX(5px); }
+}
+.er-submit-btn {
+  padding: 0.8rem 2.2rem;
+  background: var(--pink); color: #fff; border: none;
+  border-radius: 50px; font-family: inherit; font-size: 1rem; font-weight: 900;
+  cursor: pointer; transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 4px 16px rgba(255,45,122,0.4);
+}
+.er-submit-btn:hover  { background: #cc1a5e; }
+.er-submit-btn:active { transform: scale(0.96); }
+.er-code-error { color: var(--pink); font-size: 0.9rem; min-height: 1.4em; margin-top: 0.3rem; }
+
+/* victory panel */
+.er-victory-panel { text-align: center; padding: 2rem 1rem; }
+.er-victory-stamp {
+  display: inline-block;
+  font-size: 2.8rem; font-weight: 900; color: #cc0000;
+  border: 5px solid #cc0000; border-radius: 8px;
+  padding: 0.15rem 1.1rem; transform: rotate(-8deg);
+  box-shadow: 0 0 28px rgba(200,0,0,0.45);
+  animation: er-stamp-in 0.5s cubic-bezier(0.2,2,0.4,1) both;
+  margin-bottom: 1.2rem;
+}
+@keyframes er-stamp-in {
+  from { transform: rotate(-8deg) scale(3.5); opacity: 0; }
+  to   { transform: rotate(-8deg) scale(1);   opacity: 1; }
+}
+.er-victory-title {
+  font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 900;
+  color: var(--gold); margin-bottom: 0.5rem;
+  text-shadow: 0 0 24px rgba(255,215,0,0.5);
+}
+.er-victory-text { font-size: 1rem; color: rgba(255,255,255,0.8); line-height: 1.6; }
+
+/* HQ pulse on clue found */
+@keyframes er-hq-pulse {
+  0%   { outline: 0px solid rgba(255,45,122,0); }
+  30%  { outline: 4px solid rgba(255,45,122,0.8); }
+  100% { outline: 0px solid rgba(255,45,122,0); }
+}
+.er-pulse { animation: er-hq-pulse 0.9s ease; }

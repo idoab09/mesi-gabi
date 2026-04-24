@@ -1126,6 +1126,52 @@
 
 <div class="section-divider"><span><i></i><i></i><i></i></span></div>
 
+<!-- ESCAPE ROOM HQ -->
+<section class="escape-room-section" id="escape-room-hq">
+  <h2 class="section-title"><span class="section-emoji">🕵️</span> <span class="section-text">מטה החקירה — הצל את המסיבה!</span> <span class="section-emoji">🔍</span></h2>
+  <p class="section-subtitle">אנטי-גבי מנסה לבטל את המסיגבי. מצא/י 6 רמזים ונטרל/י אותו לנצח!</p>
+
+  <!-- PRE-MISSION: shown before user accepts -->
+  <div class="er-premission" id="er-premission">
+    <div class="er-pre-portrait">😈</div>
+    <div class="er-pre-name" id="er-villain-name-pre"></div>
+    <div class="er-pre-speech" id="er-villain-speech-pre"></div>
+    <button class="er-accept-btn" onclick="erAcceptMission()">קבל את המשימה! 🕵️</button>
+  </div>
+
+  <!-- MISSION ACTIVE: shown after accepting -->
+  <div class="er-mission-active" id="er-mission-active" style="display:none">
+    <div class="er-villain-card">
+      <div class="er-villain-portrait">😈</div>
+      <div class="er-villain-name" id="er-villain-name"></div>
+      <div class="er-villain-speech" id="er-villain-speech"></div>
+      <div class="er-progress-line"><span id="er-clue-count">0</span> מתוך 6 רמזים נמצאו</div>
+    </div>
+    <div class="er-corkboard" id="er-corkboard"></div>
+  </div>
+
+  <!-- SOLVE PANEL: shown when all 6 clues found -->
+  <div class="er-solve-panel" id="er-solve-panel" style="display:none">
+    <div class="er-solve-title">⚡ הרכב/י את הקוד ונטרל/י!</div>
+    <div class="er-assembled-code" id="er-assembled-code"></div>
+    <div class="er-code-input-wrap">
+      <input class="er-code-input" id="er-code-input" type="text" maxlength="6"
+             inputmode="numeric" placeholder="_ _ _ _ _ _" autocomplete="off" />
+      <button class="er-submit-btn" onclick="erSubmitCode()">נטרל את אנטי-גבי! 💥</button>
+    </div>
+    <div class="er-code-error" id="er-code-error"></div>
+  </div>
+
+  <!-- VICTORY PANEL: shown after correct code -->
+  <div class="er-victory-panel" id="er-victory-panel" style="display:none">
+    <div class="er-victory-stamp">נוטרל!</div>
+    <div class="er-victory-title" id="er-victory-title"></div>
+    <div class="er-victory-text" id="er-victory-text"></div>
+  </div>
+</section>
+
+<div class="section-divider"><span><i></i><i></i><i></i></span></div>
+
 <footer class="party-footer">
   <p>עשוי עם <span>❤️</span> ו-<span>🦆</span> עבור המסיבה של <span>גבי</span></p>
   <p style="margin-top:0.5rem;font-size:0.75rem;">כל הברווזים שמורים  2026 ©</p>

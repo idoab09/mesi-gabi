@@ -13,6 +13,7 @@ function initFromData() {
     el.addEventListener('click', () => {
       showToast(D.animalMessages[i] || '🎉 יאיי!');
       spawnSparkle(el);
+      erAnimalClicked(i);
     });
   });
 
@@ -24,6 +25,8 @@ function initFromData() {
   fetchGuests();
   fetchNoticeboard();
   fetchPhotoWall();
+
+  erInit();
 }
 
 loadData();
@@ -265,7 +268,7 @@ function endDuckGame() {
   duckTimerBar.style.width = '0%';
   duckLastScore = duckScore;
   showToast('המשחק נגמר! קלטת ' + duckScore + ' ברווזים! 🦆');
-  if (duckScore >= 5) createConfetti(canvas.width/2, canvas.height/2, 20, true);
+  if (duckScore >= 5) { createConfetti(canvas.width/2, canvas.height/2, 20, true); erClueFound('clue_duck'); }
   showLbSubmit('duck', duckScore);
   fetchLeaderboard('duck');
 }
@@ -703,6 +706,7 @@ async function postNoticeboardMessage() {
       document.getElementById('noticeboard-name').value = '';
       document.getElementById('noticeboard-input').value = '';
       showToast('📌 ההודעה פורסמה!');
+      erClueFound('clue_noticeboard');
     }
   } catch { showToast('שגיאת חיבור 😢'); }
   btn.disabled = false;
@@ -1120,6 +1124,7 @@ function timeoutTrivia() {
 }
 
 function endTrivia() {
+  erClueFound('clue_trivia');
   triviaActive = false;
   clearInterval(triviaTimerInterval);
   document.getElementById('trivia-question-wrap').style.display = 'none';
@@ -3297,6 +3302,7 @@ function update() {
           const confettiCanvas = document.getElementById('confetti-canvas');
           createConfetti(confettiCanvas.width / 2, confettiCanvas.height / 2, 80, true);
           showToast('🏆 גבי הגיע למסיבה! אלוף הקארטה!');
+          erClueFound('clue_karate');
         }
       } else {
         // Player lost — retry same round
@@ -4041,6 +4047,186 @@ window.addEventListener('resize', () => {
 
 })();
 
+// ========== ESCAPE ROOM ==========
+let erStarted = false;
+let erFoundClues = [];
+let erAnimalsClicked = new Set();
+let erFortuneClicks = 0;
+let erVictory = false;
+
+const ER_TILTS = ['-3deg', '1.5deg', '-1deg', '2.5deg', '-2deg', '1deg'];
+
+function erInit() {
+  erStarted  = localStorage.getItem('escape_started') === 'true';
+  erVictory  = localStorage.getItem('escape_victory')  === 'true';
+  erFortuneClicks = parseInt(localStorage.getItem('escape_fortune_clicks') || '0', 10);
+  try { erFoundClues = JSON.parse(localStorage.getItem('escape_clues') || '[]'); } catch { erFoundClues = []; }
+  try { erAnimalsClicked = new Set(JSON.parse(localStorage.getItem('escape_animals_clicked') || '[]')); } catch { erAnimalsClicked = new Set(); }
+
+  const er = D.escapeRoom;
+  if (!er) return;
+
+  // Populate pre-mission panel
+  document.getElementById('er-villain-name-pre').textContent = er.villainName;
+  document.getElementById('er-villain-speech-pre').textContent = er.villainIntro;
+
+  if (!erStarted) {
+    document.getElementById('er-premission').style.display = '';
+    document.getElementById('er-mission-active').style.display = 'none';
+  } else {
+    document.getElementById('er-premission').style.display = 'none';
+    document.getElementById('er-mission-active').style.display = '';
+    erRenderHQ();
+  }
+
+  if (erVictory) {
+    document.getElementById('er-solve-panel').style.display = 'none';
+    erShowVictoryPanel();
+  }
+
+  document.getElementById('er-code-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') erSubmitCode();
+  });
+}
+
+function erIsFound(id) { return erFoundClues.includes(id); }
+
+function erSaveState() {
+  localStorage.setItem('escape_clues', JSON.stringify(erFoundClues));
+  localStorage.setItem('escape_animals_clicked', JSON.stringify([...erAnimalsClicked]));
+  localStorage.setItem('escape_fortune_clicks', String(erFortuneClicks));
+}
+
+function erClueFound(id) {
+  if (erIsFound(id)) return;
+  erFoundClues.push(id);
+  erSaveState();
+  if (!erStarted) return; // silent save — no UI
+  erRenderHQ();
+  const clue = (D.escapeRoom?.clues || []).find(c => c.id === id);
+  const num = (D.escapeRoom?.clues || []).findIndex(c => c.id === id) + 1;
+  showToast(`🕵️ רמז #${num} נמצא! עבור/י למטה החקירה!`);
+  const hq = document.getElementById('escape-room-hq');
+  hq.classList.remove('er-pulse');
+  void hq.offsetWidth;
+  hq.classList.add('er-pulse');
+  erVillainReact();
+  erCheckAllFound();
+}
+
+function erAnimalClicked(i) {
+  erAnimalsClicked.add(i);
+  erSaveState();
+  if (erAnimalsClicked.size >= 8) erClueFound('clue_animals');
+}
+
+function erSetFortuneClicks(n) {
+  erFortuneClicks = n;
+  localStorage.setItem('escape_fortune_clicks', String(n));
+}
+
+function erRenderHQ() {
+  const er = D.escapeRoom;
+  if (!er) return;
+  const clues = er.clues || [];
+  const found = erFoundClues.length;
+
+  document.getElementById('er-villain-name').textContent = er.villainName;
+  document.getElementById('er-clue-count').textContent = found;
+
+  // villain speech: intro if 0 found, else random villain line
+  const speech = found === 0
+    ? er.villainIntro
+    : er.villainLines[Math.floor(Math.random() * er.villainLines.length)];
+  document.getElementById('er-villain-speech').textContent = speech;
+
+  // render clue slots
+  const board = document.getElementById('er-corkboard');
+  board.innerHTML = clues.map((c, i) => {
+    const isFound = erIsFound(c.id);
+    return `<div class="er-clue-slot ${isFound ? 'found' : 'locked'}" style="--tilt:${ER_TILTS[i % ER_TILTS.length]}">
+      <div class="er-clue-icon">${c.icon}</div>
+      <div class="er-clue-title">${isFound ? c.title : `רמז #${i+1}`}</div>
+      ${isFound
+        ? `<div class="er-clue-text">${c.text}</div>`
+        : `<div class="er-clue-locked-label">🔒 לא נמצא עדיין</div>`
+      }
+    </div>`;
+  }).join('');
+
+  // check for solve panel
+  if (!erVictory) erCheckAllFound();
+}
+
+function erCheckAllFound() {
+  const er = D.escapeRoom;
+  if (!er) return;
+  if (erFoundClues.length < (er.clues || []).length) return;
+  // all found — show solve panel
+  const solvePanel = document.getElementById('er-solve-panel');
+  solvePanel.style.display = '';
+  // assembled code: digits in clue order
+  const digits = (er.clues || []).map(c => c.digit).join(' - ');
+  document.getElementById('er-assembled-code').textContent = digits;
+}
+
+function erVillainReact() {
+  const er = D.escapeRoom;
+  if (!er) return;
+  const speech = document.getElementById('er-villain-speech');
+  if (!speech) return;
+  const line = er.villainLines[Math.floor(Math.random() * er.villainLines.length)];
+  speech.textContent = line;
+  speech.classList.add('er-react');
+  setTimeout(() => speech.classList.remove('er-react'), 1500);
+}
+
+function erAcceptMission() {
+  localStorage.setItem('escape_started', 'true');
+  erStarted = true;
+  document.getElementById('er-premission').style.display = 'none';
+  document.getElementById('er-mission-active').style.display = '';
+  erRenderHQ();
+  showToast('🕵️ המשימה התקבלה! צא/י לדרך!');
+}
+
+function erSubmitCode() {
+  const input = document.getElementById('er-code-input');
+  const val = (input?.value || '').trim();
+  const correct = D.escapeRoom?.finalCode || '';
+  if (val !== correct) {
+    document.getElementById('er-code-error').textContent = '❌ קוד שגוי — נסה/י שוב!';
+    input.classList.remove('er-shake');
+    void input.offsetWidth;
+    input.classList.add('er-shake');
+    input.value = '';
+    setTimeout(() => input.classList.remove('er-shake'), 500);
+    return;
+  }
+  erVictorySequence();
+}
+
+function erShowVictoryPanel() {
+  const er = D.escapeRoom;
+  document.getElementById('er-victory-title').textContent = er?.victoryTitle || '';
+  document.getElementById('er-victory-text').textContent  = er?.victoryText  || '';
+  document.getElementById('er-victory-panel').style.display = '';
+}
+
+function erVictorySequence() {
+  erVictory = true;
+  localStorage.setItem('escape_victory', 'true');
+  document.getElementById('er-solve-panel').style.display = 'none';
+  erShowVictoryPanel();
+  // 6 staggered confetti bursts
+  const canvas = document.getElementById('confetti-canvas');
+  const W = canvas?.width || 600;
+  [0.15, 0.35, 0.5, 0.65, 0.8, 0.5].forEach((xFrac, i) => {
+    setTimeout(() => createConfetti(W * xFrac, 80, 35, true), i * 220);
+  });
+  setTimeout(() => showToast('🎉 המסיגבי ניצלה! אנטי-גבי הובס!'), 400);
+}
+
 // ========== EXCUSE GENERATOR ==========
 let lastExcuseIndex = -1;
 function generateExcuse() {
@@ -4063,6 +4249,9 @@ let lastFortuneIdx = -1;
 let fortuneRevealed = false;
 
 function revealFortune() {
+  erFortuneClicks++;
+  erSetFortuneClicks(erFortuneClicks);
+  if (erFortuneClicks >= 3) erClueFound('clue_fortune');
   const ball = document.getElementById('fortune-ball');
   const reveal = document.getElementById('fortune-reveal');
   const emojiEl = document.getElementById('fortune-reveal-emoji');
