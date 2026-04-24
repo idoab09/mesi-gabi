@@ -807,70 +807,223 @@ body {
 .rsvp-success p { font-weight: 700; font-size: 1.1rem; color: var(--lime); }
 
 /* ===== NOTICEBOARD ===== */
-.noticeboard-form {
+.noticeboard-section {
+  padding: var(--section-pad) clamp(1rem, 4vw, 3rem);
+  text-align: center;
+}
+
+/* compose form — looks like a yellow legal pad */
+.nb-compose {
   display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin-bottom: 1.4rem;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+}
+
+.nb-compose-paper {
+  position: relative;
+  background: #fffde7;
+  border-radius: 4px 4px 6px 6px;
+  padding: 1.4rem 1.4rem 1.2rem;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 3px 4px 18px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.06);
+  /* red margin line */
+  border-right: 3px solid rgba(255,100,100,0.5);
+}
+
+/* ruled lines on the paper */
+.nb-compose-paper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    rgba(100,160,255,0.2) 27px,
+    rgba(100,160,255,0.2) 28px
+  );
+  pointer-events: none;
+}
+
+.nb-compose-name {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid rgba(0,0,0,0.15);
+  color: #333;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.2rem 0 0.4rem;
+  margin-bottom: 0.8rem;
+  direction: rtl;
+  box-sizing: border-box;
+}
+.nb-compose-name::placeholder { color: #bbb; font-weight: 400; }
+.nb-compose-name:focus { outline: none; border-bottom-color: var(--purple); }
+
+.nb-compose-text {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #333;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 28px;
+  padding: 0;
+  resize: none;
+  min-height: 112px;
+  direction: rtl;
+  box-sizing: border-box;
+}
+.nb-compose-text::placeholder { color: #ccc; }
+.nb-compose-text:focus { outline: none; }
+
+.nb-post-btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.8rem;
+  padding: 0.65rem 1.2rem;
+  background: var(--purple);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+.nb-post-btn:hover { background: #6d28d9; }
+.nb-post-btn:active { transform: scale(0.97); }
+.nb-post-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* corkboard */
+.nb-corkboard {
+  background:
+    radial-gradient(circle at 30% 40%, rgba(180,120,60,0.18) 0%, transparent 60%),
+    radial-gradient(circle at 70% 70%, rgba(160,100,40,0.12) 0%, transparent 60%),
+    #c8933a;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  min-height: 220px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  align-items: flex-start;
+  box-shadow:
+    inset 0 2px 8px rgba(0,0,0,0.35),
+    0 6px 24px rgba(0,0,0,0.5),
+    0 0 0 8px #a0722a,
+    0 0 0 10px #8b5e1a;
+  position: relative;
 }
 
 .noticeboard-empty {
-  color: var(--text-dim);
-  font-size: 0.9rem;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.95rem;
   text-align: center;
-  padding: 1rem 0;
+  align-self: center;
+  width: 100%;
 }
 
-.notice-item {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 14px;
-  padding: 0.8rem 1rem;
-  margin-bottom: 0.7rem;
-}
-
-.notice-header {
+/* sticky note */
+.nb-note {
+  position: relative;
+  width: 180px;
+  min-height: 160px;
+  padding: 2rem 0.9rem 0.75rem;
+  border-radius: 3px;
+  box-shadow: 3px 5px 18px rgba(0,0,0,0.35), inset 0 -2px 4px rgba(0,0,0,0.06);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.35rem;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: default;
+  /* folded corner */
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+}
+.nb-note:hover {
+  transform: scale(1.06) rotate(0deg) !important;
+  box-shadow: 6px 10px 28px rgba(0,0,0,0.5);
+  z-index: 10;
 }
 
-.notice-name {
-  font-size: 0.82rem;
+/* the pushpin */
+.nb-pin {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.4);
+  z-index: 2;
+}
+/* pin needle */
+.nb-pin::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 10px;
+  background: rgba(0,0,0,0.35);
+  border-radius: 0 0 2px 2px;
+}
+
+.nb-delete-btn {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.12);
+  color: rgba(0,0,0,0.4);
+  font-size: 0.6rem;
   font-weight: 900;
-  color: var(--pink);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.nb-note:hover .nb-delete-btn { opacity: 1; }
+.nb-delete-btn:hover { background: rgba(220,50,50,0.8); color: #fff; }
+
+.nb-note-name {
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: rgba(0,0,0,0.7);
+  direction: rtl;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  padding-bottom: 0.3rem;
 }
 
-.notice-date {
-  font-size: 0.72rem;
-  color: var(--text-dim);
-}
-
-.notice-text {
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.85);
+.nb-note-text {
+  font-size: 0.82rem;
+  color: rgba(0,0,0,0.8);
   line-height: 1.5;
   word-break: break-word;
-}
-
-.noticeboard-input {
-  width: 100%;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 12px;
-  color: #fff;
-  font-family: inherit;
-  font-size: 0.9rem;
-  padding: 0.7rem 1rem;
-  resize: none;
-  min-height: 80px;
-  box-sizing: border-box;
   direction: rtl;
+  flex: 1;
 }
 
-.noticeboard-input::placeholder { color: rgba(255,255,255,0.35); }
-.noticeboard-input:focus { outline: none; border-color: var(--pink); }
+.nb-note-date {
+  font-size: 0.65rem;
+  color: rgba(0,0,0,0.38);
+  text-align: left;
+  margin-top: auto;
+}
 
 @keyframes inputShake {
   0%, 100% { transform: translateX(0); }

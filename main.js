@@ -455,6 +455,7 @@ const guestEmojis = () => D.guestEmojis || ['🦆','🎉','🌟','🦩','🐸','
 let guestList = [];
 let pendingRemoveName = null;
 let pendingRemovePhoto = null; // { id, uploader }
+let pendingRemoveMessage = null; // message id
 
 function renderGuestList() {
   const grid = document.getElementById('guest-list-grid');
@@ -500,6 +501,7 @@ function closePwModal() {
   document.getElementById('pw-modal').style.display = 'none';
   pendingRemoveName = null;
   pendingRemovePhoto = null;
+  pendingRemoveMessage = null;
 }
 
 function openPwModal(label) {
@@ -518,6 +520,29 @@ function askRemovePhoto(id, uploader) {
 
 async function confirmRemove() {
   const pw = document.getElementById('pw-input').value;
+
+  if (pendingRemoveMessage) {
+    try {
+      const r = await fetch('/api/messages', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: pendingRemoveMessage, password: pw }),
+      });
+      if (r.status === 403) {
+        document.getElementById('pw-error').textContent = '❌ סיסמה שגויה!';
+        document.getElementById('pw-input').value = '';
+        document.getElementById('pw-input').focus();
+        return;
+      }
+      if (r.ok) {
+        noticeboardMessages = await r.json();
+        renderNoticeboard();
+        showToast('🗑️ ההודעה נמחקה');
+        closePwModal();
+      }
+    } catch { showToast('שגיאת חיבור 😢'); }
+    return;
+  }
 
   if (pendingRemovePhoto) {
     try {
@@ -604,23 +629,39 @@ function resetRSVP() {
 // ========== NOTICEBOARD ==========
 let noticeboardMessages = [];
 
+const NOTE_COLORS = ['#fff9c4','#ffd1dc','#c8f7c5','#c7e9ff','#f5d5ff','#ffe0b2'];
+const PIN_COLORS  = ['#e53935','#8e24aa','#1e88e5','#43a047','#fb8c00'];
+
 function renderNoticeboard() {
   const list = document.getElementById('noticeboard-list');
-  if (noticeboardMessages.length === 0) {
+  if (!noticeboardMessages.length) {
     list.innerHTML = '<p class="noticeboard-empty">אין הודעות עדיין — היה/י הראשון/ה! 📝</p>';
     return;
   }
-  list.innerHTML = noticeboardMessages.slice().reverse().map(m => {
-    const date = new Date(m.ts).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
-    return `<div class="notice-item">
-      <div class="notice-header"><span class="notice-name">${escapeHtml(m.name)}</span><span class="notice-date">${date}</span></div>
-      <div class="notice-text">${escapeHtml(m.text)}</div>
+  list.innerHTML = noticeboardMessages.slice().reverse().map((m, i) => {
+    const color = NOTE_COLORS[i % NOTE_COLORS.length];
+    const pin   = PIN_COLORS[i % PIN_COLORS.length];
+    const tilt  = ((i * 37 + 13) % 11) - 5; // deterministic tilt -5..+5 deg
+    const date  = new Date(m.ts).toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+    return `<div class="nb-note" style="background:${color};transform:rotate(${tilt}deg)" data-id="${m.id}">
+      <div class="nb-pin" style="background:${pin}"></div>
+      <button class="nb-delete-btn" onclick="askRemoveMessage('${m.id}','${escapeHtml(m.name)}')" title="מחק הודעה">✕</button>
+      <div class="nb-note-name">${escapeHtml(m.name)}</div>
+      <div class="nb-note-text">${escapeHtml(m.text)}</div>
+      <div class="nb-note-date">${date}</div>
     </div>`;
   }).join('');
 }
 
 function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function askRemoveMessage(id, name) {
+  pendingRemoveMessage = id;
+  pendingRemoveName = null;
+  pendingRemovePhoto = null;
+  openPwModal(`מחק הודעה של "${name}"`);
 }
 
 async function fetchNoticeboard() {
@@ -645,7 +686,7 @@ async function postNoticeboardMessage() {
     setTimeout(() => inp.classList.remove('input-shake'), 600);
     return;
   }
-  const btn = document.querySelector('.noticeboard-form .btn-party');
+  const btn = document.getElementById('nb-post-btn');
   btn.disabled = true;
   btn.textContent = 'שולח...';
   try {
@@ -663,7 +704,7 @@ async function postNoticeboardMessage() {
     }
   } catch { showToast('שגיאת חיבור 😢'); }
   btn.disabled = false;
-  btn.textContent = 'פרסם הודעה 📌';
+  btn.textContent = '📌 תלה על הלוח!';
 }
 
 // ========== MEMORY GAME ==========

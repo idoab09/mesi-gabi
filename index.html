@@ -303,15 +303,23 @@
 <div class="section-divider"><span><i></i><i></i><i></i></span></div>
 
 <!-- NOTICEBOARD -->
-<section class="info-section">
+<section class="noticeboard-section">
   <h2 class="section-title"><span class="section-emoji">📌</span> <span class="section-text">לוח המודעות</span> <span class="section-emoji">📌</span></h2>
-  <div class="info-card noticeboard-card">
-    <div class="noticeboard-form">
-      <input class="rsvp-input" type="text" id="noticeboard-name" placeholder="השם שלך" maxlength="40" autocomplete="off" />
-      <textarea id="noticeboard-input" class="noticeboard-input" placeholder="כתוב/י הודעה... ✍️" maxlength="200"></textarea>
-      <button class="btn-party" style="width:100%;font-size:0.9rem;padding:0.6rem;" onclick="postNoticeboardMessage()">פרסם הודעה 📌</button>
+  <p class="section-subtitle">השאר/י הודעה לגבי ולכולם — היא תתלה על הלוח!</p>
+
+  <!-- WRITE A NOTE FORM -->
+  <div class="nb-compose">
+    <div class="nb-compose-paper">
+      <div class="nb-compose-lines" aria-hidden="true"></div>
+      <input class="nb-compose-name" type="text" id="noticeboard-name" placeholder="✏️ השם שלך" maxlength="40" autocomplete="off" />
+      <textarea id="noticeboard-input" class="nb-compose-text" placeholder="כתוב/י הודעה..." maxlength="200"></textarea>
+      <button class="nb-post-btn" id="nb-post-btn" onclick="postNoticeboardMessage()">📌 תלה על הלוח!</button>
     </div>
-    <div id="noticeboard-list"></div>
+  </div>
+
+  <!-- CORKBOARD -->
+  <div class="nb-corkboard" id="noticeboard-list">
+    <p class="noticeboard-empty">אין הודעות עדיין — היה/י הראשון/ה! 📝</p>
   </div>
 </section>
 
@@ -1103,7 +1111,6 @@
     <div class="outfit-result" id="outfit-result" style="display:none">
       <div class="outfit-grid" id="outfit-grid"></div>
       <div class="outfit-vibe" id="outfit-vibe"></div>
-      <button class="btn-outfit-gen" style="margin-top:1rem;font-size:0.9rem;padding:0.6rem 1.8rem;" onclick="generateOutfit()">🎲 לוק אחר!</button>
     </div>
   </div>
 </section>
