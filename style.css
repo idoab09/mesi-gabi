@@ -4721,6 +4721,13 @@ line.pw-rope-path { fill: none; }
 }
 .er-clue-icon  { font-size: 1.4rem; }
 .er-clue-title { font-size: 0.7rem; font-weight: 900; color: #5a2800; direction: rtl; }
+.er-clue-letter {
+  font-family: 'Courier New', monospace;
+  font-size: 1.6rem; font-weight: 900;
+  color: #5a2800; letter-spacing: 0.15em;
+  text-align: center; margin: 0.3rem 0 0.1rem;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.15);
+}
 .er-clue-text  { font-size: 0.75rem; line-height: 1.45; direction: rtl; flex: 1; }
 .er-clue-locked-label { font-size: 0.72rem; color: #999; margin-top: auto; }
 .er-clue-hint {

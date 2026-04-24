@@ -4351,7 +4351,7 @@ function erRenderHQ() {
       <div class="er-clue-icon">${c.icon}</div>
       <div class="er-clue-title">${isFound ? c.title : `רמז #${i+1}`}</div>
       ${isFound
-        ? `<div class="er-clue-text">${c.text}</div>`
+        ? `<div class="er-clue-letter">${c.letter || ''}</div><div class="er-clue-text">${c.text}</div>`
         : `<div class="er-clue-locked-label">🔒 לא נמצא עדיין</div>`
       }
       <div class="er-clue-hint">${c.hint || ''}</div>
@@ -4369,7 +4369,8 @@ function erCheckAllFound() {
   // all found — show solve panel
   const solvePanel = document.getElementById('er-solve-panel');
   solvePanel.style.display = '';
-  document.getElementById('er-assembled-code').textContent = '🔓 כל הרמזים נאספו — הכנס/י את הסיסמה הסודית!';
+  const assembled = (er.clues || []).map(c => c.letter || '').join('');
+  document.getElementById('er-assembled-code').textContent = assembled;
 }
 
 function erVillainReact() {
